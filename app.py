@@ -62,7 +62,7 @@ if role == "支援者":
         st.success("状況を記録しました。")
 
 else:
-    st.header("当事者（お兄様）向けメニュー")
+    st.header("当事者 向けメニュー")
     st.write("今の気分を教えてね")
     col1, col2, col3 = st.columns(3)
     
