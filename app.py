@@ -12,7 +12,11 @@ Secretsに登録した合鍵を使ってGoogleシートに接続します
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 #--- 3. データの読み込み ---
-try: # 「状況確認シート」という名前のシートを読み込みます df = conn.read(worksheet="状況確認シート") except Exception: # まだデータがない場合は、正しい見出しで空の枠を作成します df = pd.DataFrame(columns=["date", "time", "user_type", "status"])
+try: # 「状況確認シート」という名前のシートを読み込みます 
+  df = conn.read(worksheet="シート1")
+except Exception: 
+     # まだデータがない場合は、正しい見出しで空の枠を作成します 
+  df = pd.DataFrame(columns=["date", "time", "user_type", "status"])
 
 st.title("🤝 支援者・当事者 連携アプリ")
 
