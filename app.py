@@ -4,76 +4,27 @@ import pandas as pd
 from datetime import datetime
 import pytz
 
-# --- 1. ページの設定 ---
-st.set_page_config(page_title="連携支援アプリ", layout="centered")
-
-# --- 2. スプレッドシートへの接続設定 ---
+# 1. 接続
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 3. データの読み込み ---
+# 2. 読み込み
 try:
-    # ワークシート名を「シート1」に指定
-    df = conn.read(worksheet="シート1")
-except Exception:
+    df = conn.read(worksheet="状況確認シート")
+except:
     df = pd.DataFrame(columns=["date", "time", "user_type", "status"])
 
-st.title("🤝 支援者・当事者 連携アプリ")
+st.title("🤝 状況確認アプリ")
 
-# --- 4. 役割の選択 ---
-role = st.sidebar.radio("あなたの役割を選択してください", ["支援者", "当事者"])
-
-# 日本時間を取得（寝屋川の記録時間を正確にするため）
+# 3. 日本時間
 tokyo_tz = pytz.timezone('Asia/Tokyo')
 now = datetime.now(tokyo_tz)
 
-# --- 5. メインメニュー ---
-if role == "支援者":
-    st.header("👨‍🏫 支援者向けメニュー")
-    status_choice = st.selectbox(
-        "今の状況を選んでください",
-        ["落ち着いている", "パニックが起きそう", "こだわりが強く出ている", "何かに困っていそう"]
-    )
-    if st.button("記録する"):
-        new_row = pd.DataFrame([{
-            "date": now.strftime("%Y/%m/%d"),
-            "time": now.strftime("%H:%M:%S"),
-            "user_type": "支援者",
-            "status": status_choice
-        }])
-        conn.update(worksheet="シート1", data=pd.concat([df, new_row], ignore_index=True))
-        st.success("お疲れ様です。記録を完了しました")
+# 4. ボタン
+if st.button("😊 いい感じ"):
+    new_row = pd.DataFrame([{"date": now.strftime("%Y/%m/%d"), "time": now.strftime("%H:%M:%S"), "user_type": "当事者", "status": "いい感じ"}])
+    conn.update(worksheet="状況確認シート", data=pd.concat([df, new_row], ignore_index=True))
+    st.success("スプレッドシートに記録しました！")
 
-else:
-    st.header("😊 お兄様 向けメニュー")
-    st.write("今の気分を教えてね")
-    # 4つのカラムを作成してボタンを並べる
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        if st.button("いー感じ 😄", use_container_width=True):
-            new_row = pd.DataFrame([{"date": now.strftime("%Y/%m/%d"), "time": now.strftime("%H:%M:%S"), "user_type": "当事者", "status": "いー感じ"}])
-            conn.update(worksheet="シート1", data=pd.concat([df, new_row], ignore_index=True))
-            st.balloons()
-    with col2:
-        if st.button("ふつう 😐", use_container_width=True):
-            new_row = pd.DataFrame([{"date": now.strftime("%Y/%m/%d"), "time": now.strftime("%H:%M:%S"), "user_type": "当事者", "status": "ふつう"}])
-            conn.update(worksheet="シート1", data=pd.concat([df, new_row], ignore_index=True))
-    with col3:
-        if st.button("しんどい 😡", use_container_width=True):
-            new_row = pd.DataFrame([{"date": now.strftime("%Y/%m/%d"), "time": now.strftime("%H:%M:%S"), "user_type": "当事者", "status": "しんどい"}])
-            conn.update(worksheet="シート1", data=pd.concat([df, new_row], ignore_index=True))
-    with col4:
-        if st.button("ねむい 😴", use_container_width=True):
-            new_row = pd.DataFrame([{"date": now.strftime("%Y/%m/%d"), "time": now.strftime("%H:%M:%S"), "user_type": "当事者", "status": "ねむい"}])
-            conn.update(worksheet="シート1", data=pd.concat([df, new_row], ignore_index=True))
-
-# --- 6. 履歴 ---
+# 5. 表示
 st.divider()
-st.header("📊 活動の記録")
-try:
-    current_logs = conn.read(worksheet="シート1")
-    if not current_logs.empty:
-        if st.checkbox("最新の履歴を表示する"):
-            st.dataframe(current_logs.tail(10), use_container_width=True, hide_index=True)
-except:
-    st.write("データの読み込みに失敗しました。")
+st.dataframe(df.tail(5))
