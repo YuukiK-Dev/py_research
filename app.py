@@ -10,16 +10,16 @@ st.set_page_config(page_title="状況確認アプリ", layout="centered")
 # 2. Googleスプレッドシートへの接続
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 3. 既存データの読み込み
-# 最初はデータがない場合があるため、エラーを回避する設定にしています
+# 3. データの読み込み（シート名を「シート1」に変更しました）
 try:
-    df = conn.read(worksheet="状況確認シート", ttl=0)
+    df = conn.read(worksheet="シート1", ttl=0)
 except Exception:
+    # 読み込めない場合は、見出しだけの空のデータを作ります
     df = pd.DataFrame(columns=["date", "time", "user_type", "status"])
 
 st.title("🤝 状況確認アプリ")
 
-# 4. 日本時間の取得（Asia/Tokyo）
+# 4. 日本時間の取得
 tokyo_tz = pytz.timezone('Asia/Tokyo')
 now = datetime.now(tokyo_tz)
 
@@ -33,16 +33,18 @@ if st.button("😊 いい感じ", use_container_width=True):
         "status": "いい感じ"
     }])
     
-    # 既存のデータに新しい行をくっつける
+    # 今までのデータに新しい行をくっつける
     updated_df = pd.concat([df, new_row], ignore_index=True)
     
-    # スプレッドシート全体を更新（これが一番確実な方法です）
-    conn.update(worksheet="状況確認シート", data=updated_df)
+    # 「シート1」にすべてまとめて書き込む
+    conn.update(worksheet="シート1", data=updated_df)
     
     st.balloons()
     st.success("スプレッドシートに記録しました！")
 
-# 6. 最新の履歴を表示（直近5件）
+# 6. 最新の履歴を表示
 st.divider()
 st.subheader("最新の記録")
-st.dataframe(updated_df.tail(5) if 'updated_df' in locals() else df.tail(5), use_container_width=True, hide_index=True)
+# 画面に最新の5件を表示します
+display_df = updated_df if 'updated_df' in locals() else df
+st.dataframe(display_df.tail(5), use_container_width=True, hide_index=True)
