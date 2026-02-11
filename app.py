@@ -1,8 +1,11 @@
 import streamlit as st
+st.write("connections keys:", list(st.secrets.get("connections", {}).keys()))
+st.write("has service_account:", "service_account" in st.secrets.get("connections", {}).get("gsheets", {}))
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 import pytz
+
 
 # 1. ページ設定
 st.set_page_config(page_title="状況確認アプリ", layout="centered")
