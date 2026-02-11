@@ -32,7 +32,11 @@ if st.button("😊 いい感じ", use_container_width=True):
     try:
         df = conn.read(worksheet="シート1", ttl=0)
     except Exception:
-        df = pd.DataFrame(columns=["date", "time", "user_type", "status"])
+        df = pd.DataFrame(columns=["date","time","user_type","status"])
+
+    df = df.loc[:,~df.columns.duplicated()]
+    cols=["date", "time", "user_type", "status"]
+    df = df.reindex(columns = cols)
 
     df = pd.concat([df, new_data], ignore_index=True)
     conn.update(worksheet="シート1", data=df)
