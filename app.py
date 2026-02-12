@@ -20,14 +20,25 @@ st.title("🤝 状況確認アプリ")
 tokyo_tz = pytz.timezone("Asia/Tokyo")
 now = datetime.now(tokyo_tz)
 
-# 4. 記録ボタン
-if st.button("😊 いい感じ", use_container_width=True):
-    new_data = pd.DataFrame([{
-        "date": now.strftime("%Y/%m/%d"),
-        "time": now.strftime("%H:%M:%S"),
-        "user_type": "当事者",
-        "status": "いい感じ"
-    }])
+# 4. 記録ボタン (3つ)
+st.subheader("今の気分を選んでね")
+
+moods = {
+    "😊 いい感じ":"いい感じ",
+    "😐 ふつう":"ふつう",
+    "😣 しんどい":"しんどい",
+}
+
+for label ,value in moods.items():
+    if st.button(label,use_container_width=True):
+
+        new_data = pd.DataFrame([{
+            "date":now.strftime("%Y/%m/%d"),
+            "date":now.strftime("%H:/%M:/%S"),
+            "user_type":"当事者",
+            "status":value
+
+        }])
 
     try:
         df = conn.read(worksheet="シート1", ttl=0)
