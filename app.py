@@ -34,7 +34,7 @@ for label ,value in moods.items():
 
         new_data = pd.DataFrame([{
             "date":now.strftime("%Y/%m/%d"),
-            "date":now.strftime("%H:/%M:/%S"),
+            "time":now.strftime("%H:/%M:/%S"),
             "user_type":"当事者",
             "status":value
 
