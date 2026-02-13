@@ -40,20 +40,20 @@ for label ,value in moods.items():
 
         }])
 
-    try:
-        df = conn.read(worksheet="シート1", ttl=0)
-    except Exception:
-        df = pd.DataFrame(columns=["date","time","user_type","status"])
+        try:
+            df = conn.read(worksheet="シート1", ttl=0)
+        except Exception:
+            df = pd.DataFrame(columns=["date","time","user_type","status"])
 
-    df = df.loc[:,~df.columns.duplicated()]
-    cols=["date", "time", "user_type", "status"]
-    df = df.reindex(columns = cols)
+        df = df.loc[:,~df.columns.duplicated()]
+        cols=["date", "time", "user_type", "status"]
+        df = df.reindex(columns = cols)
 
-    df = pd.concat([df, new_data], ignore_index=True)
-    conn.update(worksheet="シート1", data=df)
+        df = pd.concat([df, new_data], ignore_index=True)
+        conn.update(worksheet="シート1", data=df)
 
-    st.success("記録しました！")
-    st.rerun()  # 追加直後に表示を更新
+        st.success("記録しました！")
+        st.rerun()  # 追加直後に表示を更新
 
 # 5. 履歴を表示
 st.divider()
