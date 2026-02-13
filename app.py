@@ -32,9 +32,11 @@ moods = {
 for label ,value in moods.items():
     if st.button(label,use_container_width=True):
 
+        
+
         new_data = pd.DataFrame([{
-            "date":now.strftime("%Y/%m/%d"),
-            "time":now.strftime("%H:/%M:/%S"),
+            "date":now.strftime("%Y-%m-%d"),
+            "time":now.strftime("%H:%M:%S"),
             "user_type":"当事者",
             "status":value
 
@@ -42,6 +44,9 @@ for label ,value in moods.items():
 
         try:
             df = conn.read(worksheet="シート1", ttl=0)
+            df.columns=[c.strip() for c in df.columns]
+            df=df.rename(columns={"Time":"time","Date":"date"})
+            st.write("DEBUG columns:",df.columns.tolist())
         except Exception:
             df = pd.DataFrame(columns=["date","time","user_type","status"])
 
@@ -61,6 +66,9 @@ st.subheader("最新の記録")
 
 try:
     df = conn.read(worksheet="シート1", ttl=0)
+
+    df.columns=[c.strip() for c in df.columns]
+    df=df.rename(columns={"Time":"time","Date":"date"})
     st.dataframe(df.tail(5), use_container_width=True, hide_index=True)
 except Exception:
     st.info("まだ記録がありません。ボタンを押して最初のデータを登録しましょう！")
