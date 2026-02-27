@@ -11,7 +11,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # 1) 読み込み
 df = conn.read(worksheet="supporter_log", ttl=0)
 df = df.loc[:, ~df.columns.duplicated()]
-df = df.reindex(columns=["date", "time", "supporter", "seen_status", "action", "memo", "urgency"]).dropna(how="all")
+df = df.reindex(columns=["date", "time", "supporter", "seen_status", "action", "memo", "anxiety","hesitation","consult_need","urgency"]).dropna(how="all")
 
 if df.empty:
     st.warning("supporter_log にデータがありません（まだ記録がない可能性）")
