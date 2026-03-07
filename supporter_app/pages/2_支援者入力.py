@@ -9,18 +9,31 @@ st.title("支援者：入力（supporter_log）")
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+def suggest_support(status):
+    if status == "安定":
+        return "見守りを中心にします。"
+    elif status == "少し不安":
+        return "安心できる短い声かけと状況確認をします。"
+    elif status == "しんどい":
+        return "刺激を減らし、休息を優先します。"
+    elif status == "パニック":
+        return "安全確保を優先し、落ち着くまで無理に関わりすぎません。"
+    return "状況を確認してください。"
+
 if "last_record_id" not in st.session_state:
     st.session_state.last_record_id = None
 if "last_created_at" not in st.session_state:
     st.session_state.last_created_at = None
-if "suggestion_type" not in st.session_state:
-    st.session_state.suggestion_type = None
+if "last_suggestion_type" not in st.session_state:
+    st.session_state.last_suggestion_type = None
+if "last_seen_status" not in st.session_state:
+    st.session_state.last_seen_status = None
 if "after_relief" not in st.session_state:
     st.session_state.after_relief = 0
 
 with st.form("supporter_input"):
     supporter = st.selectbox("支援者の種類", ["家族", "支援員", "教員", "その他"])
-    seen_status = st.selectbox("当事者の状態", ["ok", "fuan", "shindoi"])
+    seen_status = st.selectbox("当事者の状態", ["安定", "少し不安", "しんどい","パニック"])
     action = st.text_input("対応（action）")
     memo = st.text_area("メモ")
     anxiety=st.slider("支援者の不安度 (0=なし~4=強い)",0,4,0)
@@ -79,82 +92,52 @@ if submitted:
     else:
         suggestion_type = "NORMAL"
     
-    st.markdown("###　提案")
-
-    if suggestion_type == "HIGH_SUPPORT":
-        st.warning("まずは一人で抱え込まないことが大切です。信頼できる人に共有してみましょう")
-    elif suggestion_type == "GUIDANCE":
-        st.info("対応手順を1つずつ整理してみましょう。まずは当事者の状態を言語化してみましょう")
-    else:
-        st.success("落ち着いて対応できています。引き続き様子を見ましょう")
-
-    after_relief = st.slider(
-        "この提案で少し安心できましたか？",
-        0,4,0,
-        key="after_relief"
-    )
-
-    if st.button("提案ログを保存"):
-        now2 = datetime.now() #ここで押した時刻にしたいので別変数でもOK
-
-        suggestion_row = pd.DataFrame([{
-            "record_id":record_id, #直前に作った record_idを紐づけ
-            "created_at": now2.strftime("%Y-%m-%d %H:%M:%S"),
-            "suggestion_type":suggestion_type,
-            "after_relief":int(st.session_state.after_relief),
-        }])
-
-        current_suggestion = conn.read(worksheet="suggestion_log",ttl=0)
-
-        if current_suggestion is None or len(current_suggestion) == 0:
-            combined_suggestion = suggestion_row
-        else:
-            current_suggestion = current_suggestion.loc[:, ~current_suggestion.columns.duplicated()]
-            for col in suggestion_row.columns:
-                if col not in current_suggestion.columns:
-                    current_suggestion[col] = pd.NA
-            combined_suggestion = pd.concat([current_suggestion,suggestion_row],ignore_index=True)
-
-        conn.update(worksheet="suggestion_log",data=combined_suggestion)
-
-    # 分岐：提案タイプを決める（※ = で代入）
-    if anxiety >= 3:
-        suggestion_type = "HIGH_SUPPORT"
-    elif hesitation == "はい":
-        suggestion_type = "GUIDANCE"
-    else:
-        suggestion_type = "NORMAL"
-
+   
 # 画面に残す（これが肝）
     st.session_state.last_record_id = record_id
     st.session_state.last_created_at = now.strftime("%Y-%m-%d %H:%M:%S")
     st.session_state.last_suggestion_type = suggestion_type
+    st.session_state.last_seen_status = seen_status
+    st.session_state.after_relief = 0
     
 
     st.success("保存しました（supporter_log）")
     st.dataframe(new_row)
+
+
 
 # --- 提案＋安心度＋提案ログ保存（submittedの外）---
 if st.session_state.last_record_id is not None:
     st.markdown("### 提案")
 
     suggestion_type = st.session_state.last_suggestion_type
+    seen_status = st.session_state.last_seen_status
+    suggestion_text = suggest_support(seen_status)
 
     if suggestion_type == "HIGH_SUPPORT":
-        st.warning("まずは一人で抱え込まないことが大切です。信頼できる人に共有してみましょう")
+        st.warning(suggestion_text)
+        st.caption("まずは一人で抱え込まないことが大切です。信頼できる人や専門機関への共有も検討してみましょう")
     elif suggestion_type == "GUIDANCE":
-        st.info("対応手順を1つずつ整理してみましょう。まずは当事者の状態を言語化してみましょう")
+        st.info(suggestion_text)
+        st.caption("対応手順を1つずつ整理してみましょう。まずは当事者の状態を言語化してみましょう")
     else:
-        st.success("落ち着いて対応できています。引き続き様子を見ましょう")
+        st.success(suggestion_text)
+        st.caption("落ち着いて対応できています。引き続き様子を見ましょう")
 
     
-    after_relief = int(st.session_state.after_relief)
+    after_relief = st.slider(
+        "この提案で少し安心できましたか？",
+        0,4,
+        key = "after_relief"
+    )
 
     if st.button("提案ログを保存",key="save_suggestion"):
         suggestion_row = pd.DataFrame([{
             "record_id": st.session_state.last_record_id,
             "created_at": st.session_state.last_created_at,
+            "seen_status":st.session_state.last_seen_status,
             "suggestion_type": st.session_state.last_suggestion_type,
+            "suggestion_text":suggestion_text,
             "after_relief": int(st.session_state.after_relief),
         }])
 
@@ -176,7 +159,8 @@ if st.session_state.last_record_id is not None:
         st.session_state.last_record_id = None
         st.session_state.last_created_at = None
         st.session_state.last_suggestion_type = None
-        st.session_state.after_relief = 0
+        st.session_state.last_seen_status = None
+        st.session_state.pop("after_relief",None)
         st.rerun()
     
 
