@@ -1,7 +1,21 @@
 import streamlit as st
+
+st.markdown(
+    """
+    <style>
+        [data-testid = "stSidebarNav"]{
+            display:none;
+        }
+    </style>
+    
+    """,
+    unsafe_allow_html=True
+    )
+
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
-import time #時間を測るためのライブラリ
+import time
+
 
 # 開始時間をいれておく箱を用意する
 if "start_time" not in st.session_state:
