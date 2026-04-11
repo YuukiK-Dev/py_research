@@ -47,9 +47,21 @@ with col2:
 with col3:
     urgency_min = st.selectbox("緊急度（以上）", [0, 1, 2], index=0)
 
+# 手順１：作業用のデータを用意する（サポーターで一次絞り込み)
 view = df.copy()
 view = view[view["supporter"].isin(supporter_filter)]
-view = view[view["urgency"].fillna(0).astype(int) >= int(urgency_min)]
+
+#手順２：点数会ルール（辞書）を作る
+urgency_map = {
+    "低い（様子を見てもよい）":0,
+    "中くらい（今日中には対応したい）":1,
+    "高い（すぐに対応・相談したい）":2,
+}
+
+# 手順３：ルールを適応して、点数で絞り込む
+view["urgency_num"] = view["urgency"].map(urgency_map)
+view = view[view["urgency_num"].fillna(0) >= int(urgency_min)]
+
 
 if only_24h:
     since = datetime.now() - timedelta(hours=24)
