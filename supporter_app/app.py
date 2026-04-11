@@ -20,7 +20,7 @@ st.markdown(
 
 
 st.title("支援者アプリ(試作)")
-st.write("左のメニューからページを選んでください")
+st.write("下のボタンから入力を開始してください")
 
 if st.button("入力を開始する"):
     st.switch_page("page/2_支援者入力.py")
