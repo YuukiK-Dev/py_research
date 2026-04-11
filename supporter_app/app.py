@@ -1,4 +1,20 @@
 import streamlit as st
+
+st.markdown(
+        """"
+        <style>
+            /*1.サイドバーのナビを見つけて*/
+            [data-testid = "stSidebarNav"]{
+                # 2.表示を消す
+                display:none            
+            }
+        </style>
+        """,
+        unsafe_allow_html=True
+)
+
+
+
 st.write("has connections:", "connections" in st.secrets)
 st.write("has gsheets:", "connections" in st.secrets and "gsheets" in st.secrets["connections"])
 
