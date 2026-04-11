@@ -4,6 +4,19 @@ from datetime import datetime, timedelta
 from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="支援者：一覧", layout="wide")
+st.markdown(
+        """
+        <style>
+            /*1.サイドバーのナビを見つけて*/
+            [data-testid = "stSidebarNav"]{
+                 /*2.表示を消す*/
+                display:none            
+            }
+        </style>
+        """,
+        unsafe_allow_html=True
+)
+
 st.title("支援者：一覧（supporter_log）")
 
 conn = st.connection("gsheets", type=GSheetsConnection)

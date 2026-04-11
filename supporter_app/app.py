@@ -1,11 +1,11 @@
 import streamlit as st
 
 st.markdown(
-        """"
+        """
         <style>
             /*1.サイドバーのナビを見つけて*/
             [data-testid = "stSidebarNav"]{
-                # 2.表示を消す
+                 /*2.表示を消す*/
                 display:none            
             }
         </style>
