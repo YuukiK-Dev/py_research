@@ -157,7 +157,7 @@ st.write("選択された場所：", location)
 st.subheader("Step1.5：支援者の種類を選択")
 
 supporter = st.radio(
-    "支援者の種類を選んでください",
+    "あなたの立場を選んでください",
     ["家族", "支援員", "教員","その他"]
     )
 
@@ -245,7 +245,7 @@ hesitation = st.radio(
     )
 
 consult_need = st.radio(
-    "誰か、専門機関に相談は必要ですか？",
+    "専門機関に相談は必要ですか？",
     ["はい","いいえ"]
 )
 
