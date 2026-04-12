@@ -3,11 +3,10 @@ import streamlit as st
 st.markdown(
     """
     <style>
-        [data-testid = "stSidebarNav"]{
+        [data-testid="stSidebarNav"]{
             display:none;
         }
     </style>
-    
     """,
     unsafe_allow_html=True
     )
