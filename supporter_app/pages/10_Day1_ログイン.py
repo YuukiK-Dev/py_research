@@ -284,7 +284,7 @@ st.write("入力された対応内容：", action)
 if st.button("保存"):
 
     # 今の時間を作る
-    now = pd.Timestamp.now(tz="Asia/Tokyo")
+    now = pd.Timestamp.now(tz="Asia/Tokyo").strftime("%Y-%m-%d %H:%M:%S")
 
     # 既存データを読み込み
     old_data = conn.read(worksheet="supporter_log", ttl=0)
