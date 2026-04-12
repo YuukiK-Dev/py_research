@@ -324,7 +324,7 @@ if st.button("保存"):
 
     st.success("保存しました！")
 
-    if consult_need == "はい" and consult_who=="家族":
-        st.write("家族に相談する判断をしました")
+    # if consult_need == "はい" and consult_who=="家族":
+    #     st.write("家族に相談する判断をしました")
 
 # --- ここまで ---
