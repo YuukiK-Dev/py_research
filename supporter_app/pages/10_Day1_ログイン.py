@@ -191,17 +191,26 @@ if st.session_state["condition"] == "ログあり":
     past_log = conn.read(worksheet = "supporter_log",ttl=0)
     past_log = pd.DataFrame(past_log)
 
+    st.write("元の件数:",len(past_log))
+
+    
+    
+    
+
     #participant_id列を文字にそろえて空白を消す
     past_log["participant_id"] = past_log["participant_id"].astype(str).str.strip()
 
     #自分のログだけに絞る
     past_log = past_log[past_log["participant_id"] == input_id]
+    st.write("IDで絞った後：",len(past_log))
 
     #今選んでいる状態と同じログだけに絞る
     past_log = past_log[past_log["seen_status"] == status]
+    st.write("状態で絞った後：",len(past_log))
 
     #成功したログだけに絞る
     past_log = past_log[past_log["is_success"] == "はい"]
+    st.write("成功で絞った後：",len(past_log))
 
     #成功したログの件数を表示
     st.write(f"成功ログ:{len(past_log)}件")
