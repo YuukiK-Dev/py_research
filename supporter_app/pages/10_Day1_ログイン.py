@@ -174,7 +174,7 @@ st.subheader("Step2：状態を選択")
 
 # ラジオボタンで状態を選ぶ
 status = st.radio(
-    "子供の今の状態を選んでください",
+    "子供や利用者さんの今の状態を選んでください",
     ["安定", "少し不安", "しんどい", "パニック"]
 )
 
@@ -234,7 +234,7 @@ st.write("選択された状態：", status)
 st.subheader("Step3：対応内容を記録")
 
 # テキスト入力（複数行）
-action = st.text_area("子供にたいして、どのような対応をしましたか")
+action = st.text_area("子供や利用者さんにたいして、どのような対応をしましたか")
 memo = st.text_area("補足メモがあれば入力してください", height=100)
 
 anxiety = st.radio(
@@ -243,7 +243,7 @@ anxiety = st.radio(
     )
 
 hesitation = st.radio(
-    "子供や患者さんに対して対応に迷いはありましたか？",
+    "子供や利用者さんに対して対応に迷いはありましたか？",
     ["はい", "いいえ"]
     )
 
@@ -285,6 +285,21 @@ st.write("入力された対応内容：", action)
 # --- ここから 保存ボタン（まだSheetsには保存しない） ---
 
 if st.button("保存"):
+
+    #ログイン前・計測開始前なら保存させない
+    if st.session_state["start_time"] is None:
+        st.error("先にログインしてください")
+        st.stop()
+
+    #conditionが空なら保存させない
+    if st.session_state["condition"] == "":
+        st.error("条件が取得できていません。もう一度ログインしてください")
+        st.stop()
+
+    #対応内容が空なら保存させない
+    if action.strip() == "":
+        st.error("対応内容を入力してください")
+        st.stop()
 
     # 今の時間を作る
     now = pd.Timestamp.now(tz="Asia/Tokyo").strftime("%Y-%m-%d %H:%M:%S")
