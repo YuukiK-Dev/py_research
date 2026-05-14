@@ -8,8 +8,8 @@ import pytz
 st.set_page_config(page_title="状況確認アプリ", layout="centered")
 
 # （デバッグ：問題が解決したら消してOK）
-st.write("connections keys:", list(st.secrets.get("connections", {}).keys()))
-st.write("has service_account:", "service_account" in st.secrets.get("connections", {}).get("gsheets", {}))
+# st.write("connections keys:", list(st.secrets.get("connections", {}).keys()))
+# st.write("has service_account:", "service_account" in st.secrets.get("connections", {}).get("gsheets", {}))
 
 # 2. Googleスプレッドシートへの接続
 conn = st.connection("gsheets", type=GSheetsConnection)
