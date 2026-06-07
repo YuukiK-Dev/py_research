@@ -59,10 +59,10 @@ except Exception:
 # 入力欄を表示する
 # participant_id と passcode をユーザーに入れてもらう
 # ------------------------------
-st.write("participant_id と passcode を入力してください")
+st.write("配付された_id と 配付されたパスワード を入力してください")
 
-participant_id = st.text_input("participant_id")
-passcode = st.text_input("passcode", type="password")
+participant_id = st.text_input("配付されたID")
+passcode = st.text_input("配付されたパスワード", type="password")
 
 input_id = str(participant_id).strip()
 input_pass = str(passcode).strip()
@@ -83,7 +83,7 @@ if st.button("ログイン"):
     # 何も入力されていないときはエラーにする
     # --------------------------
     if input_id == "" or input_pass == "":
-        st.error("participant_id と passcode の両方を入力してください")
+        st.error("配付された_id と配付されたパスワードの両方を入力してください")
         st.stop()
 
     # --------------------------
@@ -109,7 +109,7 @@ if st.button("ログイン"):
     # --------------------------
     if not matched_user.empty:
         st.success("ログイン成功")
-        st.write("participant_id:", input_id)
+        st.write("ログインID:", input_id)
         st.session_state["start_time"] = time.time()
 
         #userシートのcondition列から、この人の条件を取り出す
@@ -117,7 +117,7 @@ if st.button("ログイン"):
 
          #conditionが空なら、この先に進ませない
         if str(condition).strip() == "":
-            st.error("このIDは現在使用できません。管理者の連絡してください")
+            st.error("このIDは現在使用できません。管理者へ連絡してください")
             st.stop()
 
         #あとで保存時に使えるように、session_stateに覚えておく
@@ -130,16 +130,19 @@ if st.button("ログイン"):
         # st.write("conditionの中身確認:", repr(condition))
 
     else:
-        st.error("participant_id または passcode が違います")
+        st.error("ID または パスワード が違います")
 
     # --- ここから Day2（location入力） ---
 
 #ログイン後の条件を表示　(分岐の準備)
-st.write("あなたの条件は:",st.session_state["condition"])
+# [必須]ログあり/ ログなし条件は、研究比較に必要な項目
+st.info(f"現在の入力モードは： {st.session_state['condition']}")
+st.caption("※ログイン後から保存ボタンを押すまでの時間は、自動で記録されます")
 
    
 
-st.subheader("Step1：場所を選択")
+st.subheader("Step1：基本情報")
+st.caption("まず、今回の支援場面について基本情報を選んでください")
 
 # ラジオボタンで場所を選ぶ
 # radio = 選択式ボタン（1つだけ選べる）
@@ -148,20 +151,19 @@ location = st.radio(
     ["自宅", "学校", "職場", "その他"]
 )
 # 今選ばれている値を確認表示
-st.write("選択された場所：", location)
+# st.write("選択された場所：", location)
 
 # --- ここまで ---
 
 # --- ここから supporter入力 ---
 
-st.subheader("Step1.5：支援者の種類を選択")
-
+# st.subheader("Step1.5：支援者の種類を選択")
 supporter = st.radio(
     "あなたの立場を選んでください",
     ["家族", "支援員", "教員","その他"]
     )
 
-st.write("選択された支援者：", supporter)
+# st.write("選択された支援者：", supporter)
 
 # --- ここまで ---
 
@@ -169,12 +171,12 @@ st.write("選択された支援者：", supporter)
 
 # --- ここから Day2（status入力） ---
 
-st.subheader("Step2：状態を選択")
-
+st.subheader("Step2：現在の状態")
+st.caption("今、子供や利用者さんがどのような状態かを選んでください")
 
 # ラジオボタンで状態を選ぶ
 status = st.radio(
-    "子供や利用者さんの今の状態を選んでください",
+    "[必須]子供や利用者さんの今の状態を選んでください",
     ["安定", "少し不安", "しんどい", "パニック"]
 )
 
@@ -225,20 +227,27 @@ if st.session_state["condition"] == "ログあり":
     
 
 # 今選ばれている値を確認表示
-st.write("選択された状態：", status)
+# st.write("選択された状態：", status)
 
 # --- ここまで ---
 
 # --- ここから Day2（action入力） ---
 
-st.subheader("Step3：対応内容を記録")
+st.subheader("Step3：対応内容")
+st.caption("今回、どのように対応したかを入力してください")
 
 # テキスト入力（複数行）
-action = st.text_area("子供や利用者さんにたいして、どのような対応をしましたか")
-memo = st.text_area("補足メモがあれば入力してください", height=100)
+#[必須]対応内容は、保存時に空欄チェックをしているため必ず入力してもらう
+action = st.text_area("[必須]子供や利用者さんに対して、どのような対応をしましたか")
+
+# [任意]補足メモは、必要な場合だけ入力してもらう
+memo = st.text_area("[任意]補足メモがあれば入力してください（空欄でも大丈夫です）", height=100)
+
+st.subheader("Step4：負担感・対応結果")
+st.caption("今回の対応で感じた不安や負担、対応結果を選んでください")
 
 anxiety = st.radio(
-    "今のあなたの「どうすればいいかわからない度（不安）」は、どのくらいですか？",
+    "[必須]今のあなたの「どうすればいいかわからない度（不安）」は、どのくらいですか？",
     ["0:ぜんぜん大丈夫（見通しばっちり）", "1:ちょっとドキドキする", "2:まあまあ不安", "3:かなり不安", "4:パニックになりそう！"]
     )
 
@@ -248,13 +257,13 @@ hesitation = st.radio(
     )
 
 consult_need = st.radio(
-    "専門機関に相談は必要ですか？",
+    "この対応について、誰かに相談したいと思いますか？",
     ["はい","いいえ"]
 )
 
 if consult_need == "はい":
     consult_who = st.radio(
-        "誰に相談しますか？",
+        "[任意]相談する相手を選んでください",
         ["家族", "支援員", "教員", "その他"]
     )
 else:
@@ -263,27 +272,28 @@ else:
 #緊急度（どれくらい急いで対応・相談する必要があるか）を選ぶ
 urgency = st.radio(
     "どれくらい急いで対応・相談する必要がありますか？",
-    ["低い（様子を見てもよい）","中くらい（今日中には対応したい）","高い(すぐに対応・相談したい)"]
+    ["低い（様子を見てもよい）","中くらい（今日中には対応したい）","高い（すぐに対応・相談したい）"]
 )
 
 #心理的負担：今回の対応がどれくらい大変だったか
 mental_load = st.radio(
-    "今回の対応で感じた心理的な負担はどのくらいでしたか？",
+    "[必須]今回の対応で感じた心理的な負担はどのくらいでしたか？",
     ["1:ほとんど負担はない", "2:少し負担がある","3:ある程度負担がある", "4:かなり負担がある","5:非常に負担が大きい"]
 )
 
 is_success = st.radio(
-    "今回の対応は、うまくいきましたか？",
+    "[必須]今回の対応は、うまくいきましたか？",
     ["はい","いいえ"]
 )
 
 # 入力された内容を確認表示
-st.write("入力された対応内容：", action)
+# st.write("入力された対応内容：", action)
 
 # --- ここまで ---
 
 # --- ここから 保存ボタン（まだSheetsには保存しない） ---
 
+st.caption("入力が終わったら、下の保存ボタンを押してください。")
 if st.button("保存"):
 
     #ログイン前・計測開始前なら保存させない
@@ -340,7 +350,7 @@ if st.button("保存"):
     # Sheetsに書き込み
     conn.update(worksheet="supporter_log",data=df)
 
-    st.success("保存しました！")
+    st.success("保存しました。ご協力ありがとうございました。")
 
     # if consult_need == "はい" and consult_who=="家族":
     #     st.write("家族に相談する判断をしました")
