@@ -24,6 +24,14 @@ if "start_time" not in st.session_state:
 if "condition" not in st.session_state:
     st.session_state["condition"] = ""
 
+# ログインできたどうかを覚えておく箱を用意する
+if "is_logged_in" not in st.session_state:
+    st.session_state["is_logged_in"] = False
+
+# ログインしたIDを覚えておく箱を用意する
+if "participant_id" not in st.session_state:
+    st.session_state["participant_id"] = ""
+
 
 
 # ------------------------------
@@ -104,13 +112,18 @@ if st.button("ログイン"):
         (users_df["passcode"] == input_pass)
     ]
 
-    # --------------------------
-    # 一致したかどうかで結果を分ける
-    # --------------------------
     if not matched_user.empty:
         st.success("ログイン成功")
-        st.write("ログインID:", input_id)
+        # st.write("ログインID:", input_id)
         st.session_state["start_time"] = time.time()
+
+        # ログイン成功状態にする
+        st.session_state["is_logged_in"] = True
+
+        # ログインしたIDを保存する
+        st.session_state["participant_id"] = input_id
+
+    
 
         #userシートのcondition列から、この人の条件を取り出す
         condition = matched_user.iloc[0]["condition"]
@@ -121,7 +134,8 @@ if st.button("ログイン"):
             st.stop()
 
         #あとで保存時に使えるように、session_stateに覚えておく
-        st.session_state["condition"] = condition
+        # 前後の空白を消して、ログあり/ログなし判定を安定させる
+        st.session_state["condition"] = str(condition).strip()
 
        
 
@@ -132,12 +146,20 @@ if st.button("ログイン"):
     else:
         st.error("ID または パスワード が違います")
 
+#ログインしていない場合は、ここで止める
+if not st.session_state["is_logged_in"]:
+    st.info("配布されたIDとパスワードを入力して、ログインしてください")
+    st.stop()
+
+    
+
     # --- ここから Day2（location入力） ---
 
 #ログイン後の条件を表示　(分岐の準備)
 # [必須]ログあり/ ログなし条件は、研究比較に必要な項目
-st.info(f"現在の入力モードは： {st.session_state['condition']}")
-st.caption("※ログイン後から保存ボタンを押すまでの時間は、自動で記録されます")
+#協力者には条件名や計測情報を見せないため、表示はしない
+# st.info(f"現在の入力モードは： {st.session_state['condition']}")
+# st.caption("※ログイン後から保存ボタンを押すまでの時間は、自動で記録されます")
 
    
 
@@ -185,8 +207,8 @@ if st.session_state["condition"] == "ログあり":
     st.subheader("参考：過去の対応ログ")
 
     #条件の明示（研究的に重要）
-    st.caption("※あなたは「ログあり」条件です")
-    st.write(f"※「{status}」状態のうまくいった過去ログだけを表示しています")
+    # st.caption("※あなたは「ログあり」条件です")
+    st.write(f"※「{status}」に近い状態で、以前うまくいった対応例を表示しています")
     
 
     #supporter_logを読み込む
@@ -197,32 +219,51 @@ if st.session_state["condition"] == "ログあり":
     #participant_id列を文字にそろえて空白を消す
     past_log["participant_id"] = past_log["participant_id"].astype(str).str.strip()
 
+    #seen_status列を文字にそろえて空白を消す
+    past_log["seen_status"] = past_log["seen_status"].astype(str).str.strip()
+
+    # is_success列を文字にそろえて空白を消す
+    past_log["is_success"] = past_log["is_success"].astype(str).str.strip()
+
     #自分のログだけに絞る
-    past_log = past_log[past_log["participant_id"] == input_id]
+    past_log = past_log[past_log["participant_id"] == st.session_state["participant_id"]]
    
 
     #今選んでいる状態と同じログだけに絞る
     past_log = past_log[past_log["seen_status"] == status]
     
-    #成功したログだけに絞る
-    past_log = past_log[past_log["is_success"] == "はい"]
+    #参考にできるログだけに絞る
+    #「うまくいったと思う」「少しうまくいったと思う」を成功寄りのログとして扱う
+    success_values = [
+        "うまくいったと思う",
+        "少しうまくいったと思う"
+    ]
+
+    past_log = past_log[past_log["is_success"].isin(success_values)]
     
 
     #成功したログの件数を表示
-    st.write(f"成功ログ:{len(past_log)}件")
+    st.write(f"参考にできる対応例が {len(past_log)} 件あります")
 
     #新しい順に並べる（最新が上）
     past_log = past_log.sort_values("created_at",ascending=False)
 
     if past_log.empty:
         # 同じ状態のログが1件もないとき
-        st.info("成功した過去ログは、まだありません")
-        st.write("今回は過去ログなしで判断してください")
+        st.info("参考にできる過去の対応例は、まだありません")
+        st.write("表示された状況を見て、どう対応するかを入力してください")
         #最小限の支援（ログがないときだけ）
-        st.write("ヒント:まずは落ち着いて状況を確認しましょう")
+        st.write("ヒント:まずは落ち着いて,様子を確認しましょう")
     else:
-        #上から5件だけ表示（見やすくするため）
-        st.write(past_log.head(5))
+        #上から5件だけ表示（協力者に読みやすい形で表示する
+        for _, row in past_log.head(5).iterrows():
+            st.markdown("---")
+            st.write("日時：", row["created_at"])
+            st.write("状態：", row["seen_status"])
+            st.write("対応例：", row["action"])
+            st.write("その時の負担感：", row["mental_load"])
+            
+
 
     
 
@@ -234,36 +275,36 @@ if st.session_state["condition"] == "ログあり":
 # --- ここから Day2（action入力） ---
 
 st.subheader("Step3：対応内容")
-st.caption("今回、どのように対応したかを入力してください")
+st.caption("実際の対応、または自分が支援する場面を思い浮かべてください")
 
 # テキスト入力（複数行）
 #[必須]対応内容は、保存時に空欄チェックをしているため必ず入力してもらう
-action = st.text_area("[必須]子供や利用者さんに対して、どのような対応をしましたか")
+action = st.text_area("[必須]この場面で、どのように対応しますか？")
 
 # [任意]補足メモは、必要な場合だけ入力してもらう
 memo = st.text_area("[任意]補足メモがあれば入力してください（空欄でも大丈夫です）", height=100)
 
-st.subheader("Step4：負担感・対応結果")
-st.caption("今回の対応で感じた不安や負担、対応結果を選んでください")
+st.subheader("Step4：不安・負担感・対応結果")
+st.caption("この場面で感じた不安や負担、対応結果について選んでください")
 
 anxiety = st.radio(
-    "[必須]今のあなたの「どうすればいいかわからない度（不安）」は、どのくらいですか？",
+    "[必須]この場面で、対応を考えるときの不安はどのくらいですか？",
     ["0:ぜんぜん大丈夫（見通しばっちり）", "1:ちょっとドキドキする", "2:まあまあ不安", "3:かなり不安", "4:パニックになりそう！"]
     )
 
 hesitation = st.radio(
-    "子供や利用者さんに対して対応に迷いはありましたか？",
+    "この場面で対応に迷いはありましたか？",
     ["はい", "いいえ"]
     )
 
 consult_need = st.radio(
-    "この対応について、誰かに相談したいと思いますか？",
+    "この場面について、誰かに相談したいと思いますか？",
     ["はい","いいえ"]
 )
 
 if consult_need == "はい":
     consult_who = st.radio(
-        "[任意]相談する相手を選んでください",
+        "[任意]相談するとしたら、誰に相談しますか？",
         ["家族", "支援員", "教員", "その他"]
     )
 else:
@@ -271,19 +312,24 @@ else:
 
 #緊急度（どれくらい急いで対応・相談する必要があるか）を選ぶ
 urgency = st.radio(
-    "どれくらい急いで対応・相談する必要がありますか？",
+    "この場面では、どれくらい急いで対応・相談する必要がありますか？",
     ["低い（様子を見てもよい）","中くらい（今日中には対応したい）","高い（すぐに対応・相談したい）"]
 )
 
 #心理的負担：今回の対応がどれくらい大変だったか
 mental_load = st.radio(
-    "[必須]今回の対応で感じた心理的な負担はどのくらいでしたか？",
+    "[必須]この場面で感じた心理的な負担はどのくらいありましたか？",
     ["1:ほとんど負担はない", "2:少し負担がある","3:ある程度負担がある", "4:かなり負担がある","5:非常に負担が大きい"]
 )
 
 is_success = st.radio(
-    "[必須]今回の対応は、うまくいきましたか？",
-    ["はい","いいえ"]
+    "[必須]この場面での対応について、あなた自身はどのように感じましたか？",
+    ["うまくいったと思う",
+     "少しうまくいったと思う",
+     "どちらともいえない",
+     "あまりうまくいかなかったと思う",
+     "うまくいかなかったと思う"
+     ]
 )
 
 # 入力された内容を確認表示
@@ -308,7 +354,7 @@ if st.button("保存"):
 
     #対応内容が空なら保存させない
     if action.strip() == "":
-        st.error("対応内容を入力してください")
+        st.error("対応内容を入力してください.実際の対応、または自分ならどう対応するかを書いてください")
         st.stop()
 
     # 今の時間を作る
@@ -323,11 +369,21 @@ if st.button("保存"):
     #判断にかかった秒数 小数点2桁にする
     decision_time = round(time.time() - st.session_state["start_time"],2)
 
+    # 対応結果を分析しやすいように数値へ変換する
+    success_score_map = {
+        "うまくいったと思う": 5,
+        "少しうまくいったと思う": 4,
+        "どちらともいえない": 3,
+        "あまりうまくいかなかったと思う": 2,
+        "うまくいかなかったと思う": 1
+    }
+    is_success_score = success_score_map[is_success]
+
     #今回追加する1行を作る
     new_data = pd.DataFrame([{
         "record_id": record_id,
         "created_at": now,
-        "participant_id": participant_id,
+        "participant_id": st.session_state["participant_id"],
         "supporter": supporter,
         "seen_status": status,
         "action": action,
@@ -342,6 +398,7 @@ if st.button("保存"):
         "decision_time_sec": decision_time,
         "condition": st.session_state["condition"],
         "is_success": is_success,
+        "is_success_score": is_success_score,
         }])
 
     # 新しいデータを追加
