@@ -277,6 +277,42 @@ if st.session_state["condition"] == "ログあり":
 st.subheader("Step3：対応内容")
 st.caption("実際の対応、または自分が支援する場面を思い浮かべてください")
 
+support_category = st.selectbox(
+    "困りごとのカテゴリを選んでください",
+    [
+        "選択してください",
+        "声かけに迷う",
+        "感情が高ぶっている",
+        "予定変更で混乱している",
+        "外出を嫌がっている",
+        "支援者自身が疲れている",
+    ]
+)
+
+if support_category != "選択してください":
+
+    st.markdown("#### 対応例")
+
+    if support_category == "声かけに迷う":
+        st.info("短い言葉で声をかける\n ・一度に多く説明しない\n ・相手の反応を待つ")
+
+    elif support_category == "感情が高ぶっている":
+        st.info("自分の安全を確認する\n ・無理に説得しない\n ・落ち着ける場所や時間を確保する\n ・好きな物などを見せる")
+
+    elif support_category == "予定変更で混乱している":
+        st.info("絵や文字を書いて見える形にする\n ・次に何をするかを1つずつ示す\n ・変更点を短く伝える")
+
+    elif support_category == "外出を嫌がっている":
+        st.info("・理由を急いで聞き出さない\n ・外出の目的を短く伝える\n ・小さな一歩から提案する")
+
+    elif support_category == "支援者自身が疲れている":
+        st.info("一度、ゆっくり深呼吸をする\n ・無理に一人で抱え込まない\n ・必要に応じて相談先や他の支援者に相談する")
+        
+        st.markdown("#### 相談先の参考情報")
+        st.info("一人で抱え込まず、必要に応じて家族、施設職員、学校関係者、相談支援事業所、医療機関などに相談してください")
+
+    
+
 # テキスト入力（複数行）
 #[必須]対応内容は、保存時に空欄チェックをしているため必ず入力してもらう
 action = st.text_area("[必須]この場面で、どのように対応しますか？")
@@ -352,6 +388,10 @@ if st.button("保存"):
         st.error("条件が取得できていません。もう一度ログインしてください")
         st.stop()
 
+    if support_category == "選択してください":
+        st.error("困りごとのカテゴリを選択してください")
+        st.stop()
+
     #対応内容が空なら保存させない
     if action.strip() == "":
         st.error("対応内容を入力してください.実際の対応、または自分ならどう対応するかを書いてください")
@@ -386,6 +426,7 @@ if st.button("保存"):
         "participant_id": st.session_state["participant_id"],
         "supporter": supporter,
         "seen_status": status,
+        "support_category": support_category,
         "action": action,
         "memo": memo,
         "location": location,
@@ -399,6 +440,7 @@ if st.button("保存"):
         "condition": st.session_state["condition"],
         "is_success": is_success,
         "is_success_score": is_success_score,
+       
         }])
 
     # 新しいデータを追加
