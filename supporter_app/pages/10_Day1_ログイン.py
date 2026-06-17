@@ -274,8 +274,9 @@ if st.session_state["condition"] == "ログあり":
 
 # --- ここから Day2（action入力） ---
 
-st.subheader("Step3：対応内容")
-st.caption("実際の対応、または自分が支援する場面を思い浮かべてください")
+st.subheader("Step3：AI支援ナビ")
+st.caption("困りごとを選ぶと、対応のヒントを表示します")
+st.write("今の困りごとに近いものを1つ選んでください")
 
 support_category = st.selectbox(
     "困りごとのカテゴリを選んでください",
