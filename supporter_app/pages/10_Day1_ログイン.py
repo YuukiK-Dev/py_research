@@ -32,6 +32,10 @@ if "is_logged_in" not in st.session_state:
 if "participant_id" not in st.session_state:
     st.session_state["participant_id"] = ""
 
+#困りごとのカテゴリーを入れておく箱
+if "support_category" not in st.session_state:
+    st.session_state["support_category"] = "選択してください"
+
 
 
 # ------------------------------
@@ -276,19 +280,28 @@ if st.session_state["condition"] == "ログあり":
 
 st.subheader("Step3：AI支援ナビ")
 st.markdown("#### 困りごとの整理")
-st.write("困っている事に近いものを選んでください")
+st.write("困っていることに近いものを選んでください")
 
-support_category = st.selectbox(
-    "カテゴリ",
-    [
-        "選択してください",
-        "声かけに迷う",
-        "感情が高ぶっている",
-        "予定変更で混乱している",
-        "外出を嫌がっている",
-        "支援者自身が疲れている",
-    ]
-)
+if st.button("💬 声かけに迷う", use_container_width=True):
+    st.session_state["support_category"] = "声かけに迷う"
+
+if st.button("🌊 感情が高ぶっている", use_container_width=True):
+    st.session_state["support_category"] = "感情が高ぶっている"
+
+if st.button("📅 予定変更で混乱している", use_container_width=True):
+    st.session_state["support_category"] = "予定変更で混乱している"
+
+if st.button("🏠 外出を嫌がっている", use_container_width=True):
+    st.session_state["support_category"] = "外出を嫌がっている"
+
+if st.button("🫧 支援者自身が疲れている", use_container_width=True):
+    st.session_state["support_category"] = "支援者自身が疲れている"
+
+support_category = st.session_state["support_category"]
+
+if support_category != "選択してください":
+    st.success(f"選択中 : {support_category}")
+
 
 if support_category != "選択してください":
 
