@@ -282,20 +282,28 @@ st.subheader("Step3：AI支援ナビ")
 st.markdown("#### 困りごとの整理")
 st.write("困っていることに近いものを選んでください")
 
-if st.button("💬 声かけに迷う", use_container_width=True):
-    st.session_state["support_category"] = "声かけに迷う"
+col1,col2 = st.columns(2)
 
-if st.button("🌊 感情が高ぶっている", use_container_width=True):
-    st.session_state["support_category"] = "感情が高ぶっている"
+with col1:
+    if st.button("💬 声かけに迷う", use_container_width=True):
+        st.session_state["support_category"] = "声かけに迷う"
 
-if st.button("📅 予定変更で混乱している", use_container_width=True):
-    st.session_state["support_category"] = "予定変更で混乱している"
+with col2:
+    if st.button("🌊 感情が高ぶっている", use_container_width=True):
+        st.session_state["support_category"] = "感情が高ぶっている"
 
-if st.button("🏠 外出を嫌がっている", use_container_width=True):
-    st.session_state["support_category"] = "外出を嫌がっている"
+col3,col4 = st.columns(2)
+
+with col3:
+    if st.button("📅 予定変更で混乱している", use_container_width=True):
+        st.session_state["support_category"] = "予定変更で混乱している"
+
+with col4:
+    if st.button("🏠 外出を嫌がっている", use_container_width=True):
+        st.session_state["support_category"] = "外出を嫌がっている"
 
 if st.button("🫧 支援者自身が疲れている", use_container_width=True):
-    st.session_state["support_category"] = "支援者自身が疲れている"
+        st.session_state["support_category"] = "支援者自身が疲れている"
 
 support_category = st.session_state["support_category"]
 
