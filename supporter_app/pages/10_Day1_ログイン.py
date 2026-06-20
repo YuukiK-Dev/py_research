@@ -309,9 +309,10 @@ with col4:
     if st.button("🏠 外出を嫌がっている", use_container_width=True):
         st.session_state["support_category"] = "外出を嫌がっている"
         st.session_state["ai_advice_requested"] = False
-
+        
 if st.button("🫧 支援者自身が疲れている", use_container_width=True):
         st.session_state["support_category"] = "支援者自身が疲れている"
+        st.session_state["ai_advice_requested"] = False
 
 support_category = st.session_state["support_category"]
 
@@ -480,6 +481,23 @@ def build_ai_prompt(ai_input_data):
 """
     return ai_prompt
 
+def generate_ai_advice(ai_prompt):
+    """
+    AI対応例を作成するための仮関数です。
+    まだOpen APIには接続しません。
+    後で、この関数の中身をAPI呼び出しに差し替えます。
+    """
+    ai_advice = """
+ここにAIが生成した対応例を表示します
+
+例：\n\n
+・まず、相手と支援者自身の安全を確認する\n\n
+・状況を急いで変えようとせず、短い言葉で確認する\n\n
+・一人で抱え込まず、必要に応じて他の支援者や相談先につなぐ\n\n
+
+"""
+    return ai_advice
+
 st.subheader("Step5: AI対応例")
 st.caption("Step4までの入力内容をもとに、AIが対応のヒントを表示する予定です")
 
@@ -488,7 +506,7 @@ ai_consult_target = consult_who if consult_need == "はい" else "なし"
 #AIに渡す情報を１つの箱にまとめる
 ai_input_data = {
     "place": location,
-    "supporte_role": supporter,
+    "supporter_role": supporter,
     "current_state": status,
     "support_category": support_category,
     "anxiety_level": anxiety,
@@ -526,13 +544,8 @@ if support_category != "選択してください":
         st.session_state["ai_advice_requested"] = True
 
     if st.session_state["ai_advice_requested"]:
-        st.info(
-            "ここにAIが生成した対応例を表示します。\n\n"
-            "例: \n\n"
-            "・状況を落ちついて確認する\n\n"
-            "・相手に短くわかりやすく伝える \n\n"
-            "・必要に応じて、他の支援者や相談先につなぐ \n\n"
-        )
+        ai_advice = generate_ai_advice(ai_prompt)
+        st.info(ai_advice)
 else:
     st.warning("AI対応例を表示するには、先に困りごとのカテゴリを選んでください")
 
