@@ -212,65 +212,65 @@ status = st.radio(
 
 #ログありの人だけ過去ログを表示する
 if st.session_state["condition"] == "ログあり":
-    st.subheader("参考：過去の対応ログ")
+    with st.expander("参考：過去の対応ログ",expanded=False):
 
-    #条件の明示（研究的に重要）
-    # st.caption("※あなたは「ログあり」条件です")
-    st.write(f"※「{status}」に近い状態で、以前うまくいった対応例を表示しています")
-    
+        #条件の明示（研究的に重要）
+        # st.caption("※あなたは「ログあり」条件です")
+        st.write(f"※「{status}」に近い状態で、以前うまくいった対応例を表示しています")
+        
 
-    #supporter_logを読み込む
-    past_log = conn.read(worksheet = "supporter_log",ttl=0)
-    past_log = pd.DataFrame(past_log)
+        #supporter_logを読み込む
+        past_log = conn.read(worksheet = "supporter_log",ttl=0)
+        past_log = pd.DataFrame(past_log)
 
      
-    #participant_id列を文字にそろえて空白を消す
-    past_log["participant_id"] = past_log["participant_id"].astype(str).str.strip()
+        #participant_id列を文字にそろえて空白を消す
+        past_log["participant_id"] = past_log["participant_id"].astype(str).str.strip()
 
-    #seen_status列を文字にそろえて空白を消す
-    past_log["seen_status"] = past_log["seen_status"].astype(str).str.strip()
+        #seen_status列を文字にそろえて空白を消す
+        past_log["seen_status"] = past_log["seen_status"].astype(str).str.strip()
 
-    # is_success列を文字にそろえて空白を消す
-    past_log["is_success"] = past_log["is_success"].astype(str).str.strip()
+        # is_success列を文字にそろえて空白を消す
+        past_log["is_success"] = past_log["is_success"].astype(str).str.strip()
 
-    #自分のログだけに絞る
-    past_log = past_log[past_log["participant_id"] == st.session_state["participant_id"]]
-   
-
-    #今選んでいる状態と同じログだけに絞る
-    past_log = past_log[past_log["seen_status"] == status]
-    
-    #参考にできるログだけに絞る
-    #「うまくいったと思う」「少しうまくいったと思う」を成功寄りのログとして扱う
-    success_values = [
-        "うまくいったと思う",
-        "少しうまくいったと思う"
-    ]
-
-    past_log = past_log[past_log["is_success"].isin(success_values)]
+        #自分のログだけに絞る
+        past_log = past_log[past_log["participant_id"] == st.session_state["participant_id"]]
     
 
-    #成功したログの件数を表示
-    st.write(f"参考にできる対応例が {len(past_log)} 件あります")
+        #今選んでいる状態と同じログだけに絞る
+        past_log = past_log[past_log["seen_status"] == status]
+        
+        #参考にできるログだけに絞る
+        #「うまくいったと思う」「少しうまくいったと思う」を成功寄りのログとして扱う
+        success_values = [
+            "うまくいったと思う",
+            "少しうまくいったと思う"
+        ]
 
-    #新しい順に並べる（最新が上）
-    past_log = past_log.sort_values("created_at",ascending=False)
+        past_log = past_log[past_log["is_success"].isin(success_values)]
+        
 
-    if past_log.empty:
-        # 同じ状態のログが1件もないとき
-        st.info("参考にできる過去の対応例は、まだありません")
-        st.write("表示された状況を見て、どう対応するかを入力してください")
-        #最小限の支援（ログがないときだけ）
-        st.write("ヒント:まずは落ち着いて,様子を確認しましょう")
-    else:
-        #上から5件だけ表示（協力者に読みやすい形で表示する
-        for _, row in past_log.head(5).iterrows():
-            st.markdown("---")
-            st.write("日時：", row["created_at"])
-            st.write("状態：", row["seen_status"])
-            st.write("対応例：", row["action"])
-            st.write("その時の負担感：", row["mental_load"])
-            
+        #成功したログの件数を表示
+        st.write(f"参考にできる対応例が {len(past_log)} 件あります")
+
+        #新しい順に並べる（最新が上）
+        past_log = past_log.sort_values("created_at",ascending=False)
+
+        if past_log.empty:
+            # 同じ状態のログが1件もないとき
+            st.info("参考にできる過去の対応例は、まだありません")
+            st.write("表示された状況を見て、どう対応するかを入力してください")
+            #最小限の支援（ログがないときだけ）
+            st.write("ヒント:まずは落ち着いて,様子を確認しましょう")
+        else:
+            #上から5件だけ表示（協力者に読みやすい形で表示する
+            for _, row in past_log.head(5).iterrows():
+                st.markdown("---")
+                st.write("日時：", row["created_at"])
+                st.write("状態：", row["seen_status"])
+                st.write("対応例：", row["action"])
+                st.write("その時の負担感：", row["mental_load"])
+                
 
 
     
@@ -481,20 +481,127 @@ def build_ai_prompt(ai_input_data):
 """
     return ai_prompt
 
-def generate_ai_advice(ai_prompt):
+def generate_ai_advice(ai_input_data):
     """
     AI対応例を作成するための仮関数です。
-    まだOpen APIには接続しません。
-    後で、この関数の中身をAPI呼び出しに差し替えます。
+    まだOpenAI APIには接続しません。
+    選択された困りごとカテゴリごとに、仮の対応例を返します
     """
-    ai_advice = """
-ここにAIが生成した対応例を表示します
 
-例：\n\n
-・まず、相手と支援者自身の安全を確認する\n\n
-・状況を急いで変えようとせず、短い言葉で確認する\n\n
-・一人で抱え込まず、必要に応じて他の支援者や相談先につなぐ\n\n
+    # 選択された困りごとのカテゴリを取り出す
+    support_category = ai_input_data.get("support_category","未選択")
 
+    if support_category == "声かけに迷う":
+        ai_advice = """
+ [AI対応例 : 声かけに迷う]
+
+ 1. まず最初に確認すること
+・相手が今、話を聞ける状態かを確認する
+・表情や姿勢を見て、無理に話しかけない方がよいかを見る
+
+2. 支援者がすぐに取れる対応例
+・短い言葉で、1つずつ伝える
+・「今はこれをします」と、次の行動だけを伝える
+・返事を急がせず、少し待つ
+
+3. 無理をしないための注意点
+・一度に説明しすぎない
+・正しい言葉を探しすぎて、支援者自身が疲れないようにする
+
+4. 必要に応じて相談する相手
+・家族、支援員、教員など、普段の様子を知っている人に相談する
+"""
+
+    elif support_category == "感情が高ぶっている":
+        ai_advice = """
+【AI対応例：感情が高ぶっている】
+
+1. まず最初に確認すること
+・本人と周囲の安全を確認する
+・大きな音、人の多さ、急な声かけなど刺激が強くないかを見る
+
+2. 支援者がすぐに取れる対応例
+・無理に説得しようとしない
+・少し距離を取り、落ち着ける時間を作る
+・短く落ち着いた声で「ここで少し待ちます」と伝える
+
+3. 無理をしないための注意点
+・支援者が一人で抱え込まない
+・危険がある場合は、早めに他の支援者を呼ぶ
+
+4. 必要に応じて相談する相手
+・近くの支援員、教員、施設職員などに相談する
+"""
+
+    elif support_category == "予定変更で混乱している":
+        ai_advice = """
+【AI対応例：予定変更で混乱している】
+
+1. まず最初に確認すること
+・何が変わったことで混乱しているのかを確認する
+・本人が今、文字や絵を見られる状態かを見る
+
+2. 支援者がすぐに取れる対応例
+・変更前と変更後を、紙や画面に書いて見える形にする
+・次にすることを1つだけ伝える
+・「まずこれ、その次にこれ」と順番を短く示す
+
+3. 無理をしないための注意点
+・急いで納得させようとしない
+・説明を増やしすぎず、情報を小さく分ける
+
+4. 必要に応じて相談する相手
+・予定を知っている職員、教員、家族に確認する
+"""
+
+    elif support_category == "外出を嫌がっている":
+        ai_advice = """
+
+【AI対応例：外出を嫌がっている】
+
+1. まず最初に確認すること
+・体調が悪いのか、不安が強いのか、理由を急がずに確認する
+・外出先、移動、時間、人混みなど、負担になりそうな点を見る
+
+2. 支援者がすぐに取れる対応例
+・外出の目的を短く伝える
+・「玄関まで」「靴を履くところまで」など小さな一歩に分ける
+・無理に外へ出そうとせず、選択肢を出す
+
+3. 無理をしないための注意点
+・外出できるかどうかだけを成功・失敗で見ない
+・支援者自身も焦りすぎない
+
+4. 必要に応じて相談する相手
+・家族、支援員、教員など、本人の普段の様子を知っている人に相談する
+"""
+    elif support_category == "支援者自身が疲れている":
+        ai_advice = """
+
+【AI対応例：支援者自身が疲れている】
+
+1. まず最初に確認すること
+・今すぐ一人で対応し続ける必要があるかを確認する
+・自分の疲れ、不安、焦りが強くなっていないかを見る
+
+2. 支援者がすぐに取れる対応例
+・一度深呼吸し、少し距離を取る
+・「今すぐ全部解決しなくてよい」と考える
+・必要なことを1つだけにしぼる
+
+3. 無理をしないための注意点
+・支援者が倒れるほど頑張ることは、よい支援とは限らない
+・一人で抱え込まず、相談することも支援の一部と考える
+
+4. 必要に応じて相談する相手
+・家族、施設職員、学校関係者、相談支援事業所、必要に応じて医療機関
+"""
+
+    else:
+        ai_advice = """
+困りごとのカテゴリがまだ選択されていません。
+
+先にカテゴリを選ぶと、AI対応例を表示できます。
 """
     return ai_advice
 
@@ -544,7 +651,7 @@ if support_category != "選択してください":
         st.session_state["ai_advice_requested"] = True
 
     if st.session_state["ai_advice_requested"]:
-        ai_advice = generate_ai_advice(ai_prompt)
+        ai_advice = generate_ai_advice(ai_input_data)
         st.info(ai_advice)
 else:
     st.warning("AI対応例を表示するには、先に困りごとのカテゴリを選んでください")
