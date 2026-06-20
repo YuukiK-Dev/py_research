@@ -36,6 +36,10 @@ if "participant_id" not in st.session_state:
 if "support_category" not in st.session_state:
     st.session_state["support_category"] = "選択してください"
 
+# AI対応例の作成ボタンが押されたかを覚えておく箱
+if "ai_advice_requested" not in st.session_state:
+    st.session_state["ai_advice_requested"] = False
+
 
 
 # ------------------------------
@@ -287,20 +291,24 @@ col1,col2 = st.columns(2)
 with col1:
     if st.button("💬 声かけに迷う", use_container_width=True):
         st.session_state["support_category"] = "声かけに迷う"
+        st.session_state["ai_advice_requested"] = False
 
 with col2:
     if st.button("🌊 感情が高ぶっている", use_container_width=True):
         st.session_state["support_category"] = "感情が高ぶっている"
+        st.session_state["ai_advice_requested"] = False
 
 col3,col4 = st.columns(2)
 
 with col3:
     if st.button("📅 予定変更で混乱している", use_container_width=True):
         st.session_state["support_category"] = "予定変更で混乱している"
+        st.session_state["ai_advice_requested"] = False
 
 with col4:
     if st.button("🏠 外出を嫌がっている", use_container_width=True):
         st.session_state["support_category"] = "外出を嫌がっている"
+        st.session_state["ai_advice_requested"] = False
 
 if st.button("🫧 支援者自身が疲れている", use_container_width=True):
         st.session_state["support_category"] = "支援者自身が疲れている"
@@ -426,13 +434,79 @@ is_success = st.radio(
 # 入力された内容を確認表示
 # st.write("入力された対応内容：", action)
 
+#AI支援ナビ：AIに渡す文章を作る関数
+
+def build_ai_prompt(ai_input_data):
+    # AI対応例を作成するためのプロンプト文を作る関数です
+    # まだAIに接続しません
+
+    place = ai_input_data.get("place","未入力")
+    supporter_role = ai_input_data.get("supporter_role","未入力")
+    current_state = ai_input_data.get("current_state","未入力")
+    support_category = ai_input_data.get("support_category","未入力")
+    anxiety_level = ai_input_data.get("anxiety_level","未入力")
+    wants_consultation = ai_input_data.get("wants_consultation","未入力")
+    consultation_target = ai_input_data.get("consultation_target","未入力")
+    urgency_level = ai_input_data.get("urgency_level","未入力")
+    mental_load = ai_input_data.get("mental_load","未入力")
+
+    ai_prompt = f"""
+あなたは、支援者の意思決定を補助するAIです。
+
+以下の情報をもとに、支援者が次に取りやすい対応例を作成してください。
+
+[入力情報]
+・場所 : {place}
+・支援者の立場 : {supporter_role}
+・現在の状態 : {current_state}
+・困りごとのカテゴリ : {support_category}
+・不安度 : {anxiety_level}
+・相談希望 : {wants_consultation}
+・相談先 : {consultation_target}
+・緊急度 : {urgency_level}
+・心理的負担 : {mental_load}
+
+[出力して欲しい内容]
+1. まず最初に確認すること
+2. 支援者がすぐに取れる対応例
+3. 無理をしないための注意点
+4. 必要に応じて相談する相手
+
+[注意]
+・医療的判断や専門的診断を行わないでください。
+・断定的な言い方は避けてください。
+・支援者の心理的負担を増やさない、やさしい表現にしてください。
+・具体的で短く、実行しやすい対応例にしてください。
+"""
+    return ai_prompt
+
 st.subheader("Step5: AI対応例")
 st.caption("Step4までの入力内容をもとに、AIが対応のヒントを表示する予定です")
 
 ai_consult_target = consult_who if consult_need == "はい" else "なし"
 
+#AIに渡す情報を１つの箱にまとめる
+ai_input_data = {
+    "place": location,
+    "supporte_role": supporter,
+    "current_state": status,
+    "support_category": support_category,
+    "anxiety_level": anxiety,
+    "wants_consultation": consult_need,
+    "consultation_target": ai_consult_target,
+    "urgency_level": urgency,
+    "mental_load": mental_load,
+}
+#まとめた情報をもとに、AIへ渡す文章を作る
+ai_prompt = build_ai_prompt(ai_input_data)
+
+
 st.markdown("#### AIに渡す予定の情報（確認用）")
 st.caption("※現在はAI未接続です。確認用として表示しています")
+
+#AIに実際に渡す予定の文章を確認する
+with st.expander("AIに渡す文章を確認する"):
+    st.text(ai_prompt)
 
 st.info(
     f"場所 : {location}\n\n"
@@ -447,13 +521,18 @@ st.info(
 )
 
 if support_category != "選択してください":
-    st.info(
-        "ここにAIが生成した対応例を表示します。\n\n"
-        "例: \n\n"
-        "・状況を落ちついて確認する\n\n"
-        "・相手に短くわかりやすく伝える \n\n"
-        "・必要に応じて、他の支援者や相談先につなぐ \n\n"
-    )
+
+    if st.button("AI対応例を作成する", use_container_width=True):
+        st.session_state["ai_advice_requested"] = True
+
+    if st.session_state["ai_advice_requested"]:
+        st.info(
+            "ここにAIが生成した対応例を表示します。\n\n"
+            "例: \n\n"
+            "・状況を落ちついて確認する\n\n"
+            "・相手に短くわかりやすく伝える \n\n"
+            "・必要に応じて、他の支援者や相談先につなぐ \n\n"
+        )
 else:
     st.warning("AI対応例を表示するには、先に困りごとのカテゴリを選んでください")
 
