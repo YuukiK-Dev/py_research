@@ -429,6 +429,23 @@ is_success = st.radio(
 st.subheader("Step5: AI対応例")
 st.caption("Step4までの入力内容をもとに、AIが対応のヒントを表示する予定です")
 
+ai_consult_target = consult_who if consult_need == "はい" else "なし"
+
+st.markdown("#### AIに渡す予定の情報（確認用）")
+st.caption("※現在はAI未接続です。確認用として表示しています")
+
+st.info(
+    f"場所 : {location}\n\n"
+    f"支援者の立場 : {supporter}\n\n"
+    f"現在の状態 : {status}\n\n"
+    f"困りごとのカテゴリ : {support_category}\n\n"
+    f"不安度 : {anxiety}\n\n"
+    f"相談希望 : {consult_need}\n\n"
+    f"相談先 : {ai_consult_target}\n\n"
+    f"緊急度 : {urgency}\n\n"
+    f"心理的負担 : {mental_load}\n\n"
+)
+
 if support_category != "選択してください":
     st.info(
         "ここにAIが生成した対応例を表示します。\n\n"
