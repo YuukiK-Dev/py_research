@@ -14,6 +14,7 @@ st.markdown(
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 import time
+SHOW_AI_DEBUG = False
 
 
 # 開始時間をいれておく箱を用意する
@@ -660,25 +661,31 @@ ai_input_data = {
 #まとめた情報をもとに、AIへ渡す文章を作る
 ai_prompt = build_ai_prompt(ai_input_data)
 
+if SHOW_AI_DEBUG:
 
-st.markdown("#### AIに渡す予定の情報（確認用）")
-st.caption("※現在はAI未接続です。確認用として表示しています")
+    st.markdown("#### AIに渡す予定の情報（確認用）")
+    st.caption("※現在はAI未接続です。確認用として表示しています")
 
-#AIに実際に渡す予定の文章を確認する
-with st.expander("AIに渡す文章を確認する"):
-    st.text(ai_prompt)
+    #AIに渡す予定んお情報を折りたたみ表示にする
+    with st.expander("AIに渡す予定の情報を確認する",expanded=False):
+        
+        st.markdown("#### 入力データ")
 
-st.info(
-    f"場所 : {location}\n\n"
-    f"支援者の立場 : {supporter}\n\n"
-    f"現在の状態 : {status}\n\n"
-    f"困りごとのカテゴリ : {support_category}\n\n"
-    f"不安度 : {anxiety}\n\n"
-    f"相談希望 : {consult_need}\n\n"
-    f"相談先 : {ai_consult_target}\n\n"
-    f"緊急度 : {urgency}\n\n"
-    f"心理的負担 : {mental_load}\n\n"
-)
+        st.info(
+                f"場所 : {location}\n\n"
+                f"支援者の立場 : {supporter}\n\n"
+                f"現在の状態 : {status}\n\n"
+                f"困りごとのカテゴリ : {support_category}\n\n"
+                f"不安度 : {anxiety}\n\n"
+                f"相談希望 : {consult_need}\n\n"
+                f"相談先 : {ai_consult_target}\n\n"
+                f"緊急度 : {urgency}\n\n"
+                f"心理的負担 : {mental_load}\n\n"
+        )
+        st.markdown("#### 入力データ")
+
+        st.text(ai_prompt)
+
 
 if support_category != "選択してください":
 
