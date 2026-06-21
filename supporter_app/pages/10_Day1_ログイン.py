@@ -331,8 +331,29 @@ if st.button("🫧 支援者自身が疲れている", use_container_width=True)
 support_category = st.session_state["support_category"]
 
 if support_category != "選択してください":
-    st.success(f"選択中 : {support_category}")
-
+    st.markdown(
+        f"""
+        <div style="
+            border: 1px solid #dbeafe;
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin: 12px 0 16px 0;
+            background-color: #eff6ff;
+            color: #1f2937;
+        ">
+            <div style="font-size: 14px; color: #2563eb; font-weight: bold;">
+                ✅ 選択中の困りごと
+            </div>
+            <div style="font-size: 18px; font-weight: bold; margin-top: 6px;">
+                {support_category}
+            </div>
+            <div style="font-size: 14px; color: #374151; margin-top: 6px;">
+                この内容に合わせて、対応例とAI対応例のヒントを表示します。
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 if support_category != "選択してください":
 
