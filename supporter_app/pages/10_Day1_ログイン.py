@@ -282,9 +282,23 @@ if st.session_state["condition"] == "ログあり":
 
 # --- ここから Day2（action入力） ---
 
-st.subheader("Step3：AI支援ナビ")
-st.markdown("#### 困りごとの整理")
-st.write("困っていることに近いものを選んでください")
+st.markdown(
+    """
+    <div style="
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    padding: 16px;
+    margin: 16px 0;
+    background-color: #f8fbff;
+    color: #1f2937;
+">
+    <h3 style="margin-bottom: 4px; color: #1f2937">🤖 Step3：AI支援ナビ</h3>
+    <p style="margin-bottom: 0; color: #374151;">困っていることに近いものを選んでください</p>
+</div>
+
+""",
+unsafe_allow_html=True
+)
 
 col1,col2 = st.columns(2)
 
@@ -653,10 +667,12 @@ if support_category != "選択してください":
     if st.session_state["ai_advice_requested"]:
         ai_advice = generate_ai_advice(ai_input_data)
 
-        st.markdown("#### 🤖 AI対応例（仮）")
-        st.caption("※現在はOpenAI API未接続のため、カテゴリ別の仮対応例を表示しています")
+        # AI対応例をカード風の枠内に表示する
+        with st.container(border = True):
+            st.markdown("#### 🤖 AI対応例（仮）")
+            st.caption("※現在はOpenAI API未接続のため、カテゴリ別の仮対応例を表示しています")
 
-        st.markdown(ai_advice)
+            st.markdown(ai_advice)
 else:
     st.warning("AI対応例を表示するには、先に困りごとのカテゴリを選んでください")
 
