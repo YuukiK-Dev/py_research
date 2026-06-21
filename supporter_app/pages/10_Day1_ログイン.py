@@ -693,6 +693,11 @@ if support_category != "選択してください":
             st.markdown("#### 🤖 AI対応例（仮）")
             st.caption("※現在はOpenAI API未接続のため、カテゴリ別の仮対応例を表示しています")
 
+            st.markdown(
+                "この対応例は、支援者が次の行動を考えるためのヒントです。"
+                "医療的判断や診断でなく、無理なく取れる対応を整理する目的で表示しています。"
+            )
+
             st.markdown(ai_advice)
 else:
     st.warning("AI対応例を表示するには、先に困りごとのカテゴリを選んでください")
