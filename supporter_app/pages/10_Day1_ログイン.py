@@ -16,6 +16,11 @@ from streamlit_gsheets import GSheetsConnection
 import time
 SHOW_AI_DEBUG = False
 
+# 基本の対応例を画面に表示するかどうかを切り替える設定
+# True : API未接続・開発中は表示する
+# False : AI接続後・実証時は表示しない
+SHOW_BASIC_ADVICE = True
+
 
 # 開始時間をいれておく箱を用意する
 if "start_time" not in st.session_state:
@@ -331,7 +336,7 @@ if st.button("🫧 支援者自身が疲れている", use_container_width=True)
 
 support_category = st.session_state["support_category"]
 
-if support_category != "選択してください":
+if support_category != "選択してください" and SHOW_BASIC_ADVICE:
     st.markdown(
         f"""
         <div style="
@@ -356,7 +361,7 @@ if support_category != "選択してください":
         unsafe_allow_html=True
     )
 
-if support_category != "選択してください":
+if support_category != "選択してください" and SHOW_BASIC_ADVICE:
 
     st.markdown("#### 対応例")
 
