@@ -712,6 +712,10 @@ if support_category != "選択してください":
     if st.session_state["ai_advice_requested"]:
         ai_advice = generate_ai_advice(ai_input_data)
 
+        st.session_state["ai_advice_text"] = ai_advice
+        st.session_state["ai_advice_source"] = "basic_fallback"
+        st.session_state["ai_error_message"] = ""
+
         # AI対応例をカード風の枠内に表示する
         with st.container(border = True):
             st.markdown("#### 🤖 AI対応例（仮）")

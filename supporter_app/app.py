@@ -23,4 +23,4 @@ st.title("支援者アプリ(試作)")
 st.write("下のボタンから入力を開始してください")
 
 if st.button("入力を開始する"):
-    st.switch_page("pages/10_Day1_ログイン.py")
+    st.switch_page("pages/10_support_record.py")
