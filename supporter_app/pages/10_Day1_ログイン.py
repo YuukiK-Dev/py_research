@@ -46,6 +46,18 @@ if "support_category" not in st.session_state:
 if "ai_advice_requested" not in st.session_state:
     st.session_state["ai_advice_requested"] = False
 
+# AI対応例の本文を一時保存しておく箱
+if "ai_advice_text" not in st.session_state:
+    st.session_state["ai_advice_text"] = ""
+
+#AI対応例がどこから作られたかを覚えておく箱
+#例 : openai / basic_fallback
+if "ai_advice_source" not in st.session_state:
+    st.session_state["ai_advice_source"] = ""
+
+#AI生成に失敗したときの理由を一時保存しておく箱
+if "ai_error_message" not in st.session_state:
+    st.session_state["ai_error_message"] = ""
 
 
 # ------------------------------
