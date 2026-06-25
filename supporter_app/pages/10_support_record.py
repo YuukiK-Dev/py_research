@@ -658,6 +658,13 @@ def get_basic_advice(ai_input_data):
 """
     return ai_advice
 
+def get_openai_advice(ai_input_data):
+    """
+    OpenAI APIでAI対応例を作成する関数です。
+    今はまだあPIを実行せず、接続実装前の仮置きです。
+    """
+    return None
+
 
 def generate_ai_advice(ai_input_data):
     """
