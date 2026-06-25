@@ -534,7 +534,7 @@ def build_ai_prompt(ai_input_data):
 """
     return ai_prompt
 
-def generate_ai_advice(ai_input_data):
+def get_basic_advice(ai_input_data):
     """
     AI対応例を作成するための仮関数です。
     まだOpenAI APIには接続しません。
@@ -657,6 +657,14 @@ def generate_ai_advice(ai_input_data):
 先にカテゴリを選ぶと、AI対応例を表示できます。
 """
     return ai_advice
+
+
+def generate_ai_advice(ai_input_data):
+    """
+    AI対応例を作成する入口となる関数です。
+    今はOpenAI APIを使わず、基本の仮対応例を返します。
+    """
+    return get_basic_advice(ai_input_data)
 
 st.subheader("Step5: AI対応例")
 st.caption("Step4までの入力内容をもとに、AIが対応のヒントを表示する予定です")
