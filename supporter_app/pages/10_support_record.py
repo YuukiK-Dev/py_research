@@ -1,5 +1,9 @@
 import streamlit as st
 
+import openai
+from openai import OpenAI
+
+
 st.markdown(
     """
     <style>
@@ -661,17 +665,44 @@ def get_basic_advice(ai_input_data):
 def get_openai_advice(ai_input_data):
     """
     OpenAI APIでAI対応例を作成する関数です。
-    今はまだあPIを実行せず、接続実装前の仮置きです。
+    成功した場合は、OpenAIが生成した対応例の文章を返します
     """
-    return None
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+    ai_prompt = build_ai_prompt(ai_input_data)
+
+    response = client.responses.create(
+        model="gpt-5.5",
+        input=ai_prompt,
+    )
+
+    ai_advice = response.output_text
+
+    if ai_advice is None or ai_advice.strip() == "":
+        raise ValueError("OpenAIから空の応答が返りました")
+
+    return ai_advice.strip()
 
 
 def generate_ai_advice(ai_input_data):
     """
     AI対応例を作成する入口となる関数です。
-    今はOpenAI APIを使わず、基本の仮対応例を返します。
+    OpenAI APIを試し、失敗した場合は基本の仮対応例に戻します。
     """
-    return get_basic_advice(ai_input_data)
+
+    try:
+        ai_advice = get_openai_advice(ai_input_data)
+
+        st.session_state["ai_advice_source"] = "openai"
+        st.session_state["ai_error_message"] = ""
+
+        return ai_advice
+
+    except Exception as e:
+        st.session_state["ai_advice_source"] = "basic_fallback"
+        st.session_state["ai_error_message"] = str(e)
+
+        return get_basic_advice(ai_input_data)
 
 st.subheader("Step5: AI対応例")
 st.caption("Step4までの入力内容をもとに、AIが対応のヒントを表示する予定です")
@@ -724,24 +755,22 @@ if support_category != "選択してください":
     if st.button("AI対応例を作成する", use_container_width=True):
         st.session_state["ai_advice_requested"] = True
 
-    if st.session_state["ai_advice_requested"]:
         ai_advice = generate_ai_advice(ai_input_data)
-
         st.session_state["ai_advice_text"] = ai_advice
-        st.session_state["ai_advice_source"] = "basic_fallback"
-        st.session_state["ai_error_message"] = ""
+
+    if st.session_state["ai_advice_requested"] and st.session_state["ai_advice_text"] != "":
 
         # AI対応例をカード風の枠内に表示する
         with st.container(border = True):
-            st.markdown("#### 🤖 AI対応例（仮）")
-            st.caption("※現在はOpenAI API未接続のため、カテゴリ別の仮対応例を表示しています")
+            st.markdown("#### 🤖 AI対応例")
+            st.caption("※OpenAI APIが利用できない場合は、基本の対応例を表示します")
 
             st.markdown(
                 "この対応例は、支援者が次の行動を考えるためのヒントです。"
                 "医療的判断や診断でなく、無理なく取れる対応を整理する目的で表示しています。"
             )
 
-            st.markdown(ai_advice)
+            st.markdown(st.session_state["ai_advice_text"])
 else:
     st.warning("AI対応例を表示するには、先に困りごとのカテゴリを選んでください")
 
