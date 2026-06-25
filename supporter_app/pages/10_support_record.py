@@ -770,8 +770,10 @@ if support_category != "選択してください":
     if st.button("AI対応例を作成する", use_container_width=True):
         st.session_state["ai_advice_requested"] = True
 
-        ai_advice = generate_ai_advice(ai_input_data)
-        st.session_state["ai_advice_text"] = ai_advice
+        #AI対応例がまだ作成されていない場合だけ、AI対応例を作成する
+        if st.session_state["ai_advice_text"] == "":
+            ai_advice = generate_ai_advice(ai_input_data)
+            st.session_state["ai_advice_text"] = ai_advice
 
     if st.session_state["ai_advice_requested"] and st.session_state["ai_advice_text"] != "":
 
