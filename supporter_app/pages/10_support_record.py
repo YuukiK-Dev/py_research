@@ -394,7 +394,7 @@ if support_category != "選択してください" and SHOW_BASIC_ADVICE:
 
 if support_category != "選択してください" and SHOW_BASIC_ADVICE:
 
-    st.markdown("#### 対応例")
+    st.markdown("#### 今できる対応のヒント")
 
     if support_category == "声かけに迷う":
         st.info(
