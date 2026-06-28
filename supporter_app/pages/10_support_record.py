@@ -480,8 +480,13 @@ if support_category != "選択してください" and SHOW_BASIC_ADVICE:
     
 
 # テキスト入力（複数行）
-#[必須]対応内容は、保存時に空欄チェックをしているため必ず入力してもらう
-action = st.text_area("[必須]この場面で、どのように対応しますか？")
+#支援者自身が疲れている場合は、対応内容を無理に書かせない
+if support_category == "支援者自身が疲れている":
+    action_label = "[任意]今の自分にできそうなこと、または記録しておきたいことを書いてください（空欄でも大丈夫です）"
+else:
+    action_label = "[必須]この場面で、どのように対応をしますか？"
+
+action = st.text_area(action_label)
 
 # [任意]補足メモは、必要な場合だけ入力してもらう
 memo = st.text_area("[任意]補足メモがあれば入力してください（空欄でも大丈夫です）", height=100)
@@ -842,8 +847,8 @@ if st.button("保存"):
         st.error("困りごとのカテゴリを選択してください")
         st.stop()
 
-    #対応内容が空なら保存させない
-    if action.strip() == "":
+    #支援者自身が疲れている場合以外は、対応内容を必須にする
+    if support_category != "支援者自身が疲れている" and action.strip() == "":
         st.error("対応内容を入力してください.実際の対応、または自分ならどう対応するかを書いてください")
         st.stop()
 
