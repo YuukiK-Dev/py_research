@@ -749,7 +749,7 @@ def generate_ai_advice(ai_input_data):
 
         return get_basic_advice(ai_input_data)
 
-st.subheader("Step5: AI対応例")
+st.subheader("Step5: AIからの対応ヒント")
 st.caption("Step4までの入力内容をもとに、AIが対応のヒントを表示する予定です")
 
 ai_consult_target = consult_who if consult_need == "はい" else "なし"
