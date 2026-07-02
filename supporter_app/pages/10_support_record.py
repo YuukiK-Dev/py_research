@@ -7,13 +7,84 @@ from openai import OpenAI
 st.markdown(
     """
     <style>
+        /* サイドバーのページ一覧を非表示にする */
         [data-testid="stSidebarNav"]{
             display:none;
+        }
+
+        /* Step1カード全体：グリーン */
+        div.st-key-step1_card {
+            background-color: #eaf7ea !important;
+            border: 2px solid #8fd19e !important;
+            border-radius: 20px !important;
+            box-shadow: 0 4px 14px rgba(80, 160, 100, 0.16) !important;
+            padding: 18px !important;
+            margin-bottom: 24px !important;
+        }
+
+        /* Step2カード全体：黄色 */
+        div.st-key-step2_card {
+            background-color: #fff7cc !important;
+            border: 2px solid #facc15 !important;
+            border-radius: 20px !important;
+            box-shadow: 0 4px 14px rgba(180, 140, 20, 0.14) !important;
+            padding: 18px !important;
+            margin-bottom: 24px !important;
+        }
+
+        /* Step3カード全体：水色 */
+        div.st-key-step3_card {
+            background-color: #e0f2fe !important;
+            border: 2px solid #7dd3fc !important;
+            border-radius: 20px !important;
+            box-shadow: 0 4px 14px rgba(56, 189, 248, 0.16) !important;
+            padding: 18px !important;
+            margin-bottom: 24px !important;
+        }
+
+        /* Step4カード全体：オレンジ */
+        div.st-key-step4_card {
+            background-color: #ffedd5 !important;
+            border: 2px solid #fb923c !important;
+            border-radius: 20px !important;
+            box-shadow: 0 4px 14px rgba(251, 146, 60, 0.16) !important;
+            padding: 18px !important;
+            margin-bottom: 24px !important;
+        }
+
+        /* Step5カード全体：むらさき */
+        div.st-key-step5_card {
+            background-color: #f3e8ff !important;
+            border: 2px solid #c084fc !important;
+            border-radius: 20px !important;
+            box-shadow: 0 4px 14px rgba(168, 85, 247, 0.16) !important;
+            padding: 18px !important;
+            margin-bottom: 24px !important;
+        }
+
+        /* Step6カード全体：ミント */
+        div.st-key-step6_card {
+            background-color: #dcfce7 !important;
+            border: 2px solid #22c55e !important;
+            border-radius: 20px !important;
+            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.16) !important;
+            padding: 18px !important;
+            margin-bottom: 24px !important;
+        }
+
+        /* Step7カード全体：保存用のやさしいピンク */
+        div.st-key-step7_card {
+            background-color: #ffe4ef !important;
+            border: 2px solid #f472b6 !important;
+            border-radius: 20px !important;
+            box-shadow: 0 4px 14px rgba(244, 114, 182, 0.18) !important;
+            padding: 18px !important;
+            margin-bottom: 24px !important;
         }
     </style>
     """,
     unsafe_allow_html=True
-    )
+)
 
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
@@ -193,44 +264,105 @@ if not st.session_state["is_logged_in"]:
 
    
 
-st.subheader("Step1：基本情報")
-st.caption("まず、今回の支援場面について基本情報を選んでください")
+# ------------------------------
+# Step1：基本情報
+# 場所と支援者の立場を入力するカード
+# ------------------------------
+with st.container(border=True,key="step1_card"):
 
-# ラジオボタンで場所を選ぶ
-# radio = 選択式ボタン（1つだけ選べる）
-location = st.radio(
-    "場所を選んでください",
-    ["自宅", "学校", "職場", "その他"]
+    st.markdown(
+    """
+    <div style="
+        background-color: #fff0f6;
+        border: 1.5px solid #f9a8d4;
+        border-radius: 16px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+    ">
+        <div style="
+            font-size: 24px;
+            font-weight: bold;
+            color: #374151;
+        ">
+            🌸 Step1：基本情報
+        </div>
+        <div style="
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 6px;
+        ">
+            まず、今回の支援場面について、場所とあなたの立場を選んでください。
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
 )
-# 今選ばれている値を確認表示
-# st.write("選択された場所：", location)
 
-# --- ここまで ---
-
-# --- ここから supporter入力 ---
-
-# st.subheader("Step1.5：支援者の種類を選択")
-supporter = st.radio(
-    "あなたの立場を選んでください",
-    ["家族", "支援員", "教員","その他"]
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #fbcfe8;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 10px 0 16px 0;
+            background-color: #fff7fb;
+            color: #374151;
+        ">
+            <b>ここで入力すること</b><br>
+            どこで、どの立場で支援している場面なのかを記録します。
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-# st.write("選択された支援者：", supporter)
+    col_location, col_supporter = st.columns(2)
 
-# --- ここまで ---
+    with col_location:
+        location = st.radio(
+            "📍 場所を選んでください",
+            ["自宅", "学校", "職場", "その他"]
+        )
+
+    with col_supporter:
+        supporter = st.radio(
+            "👤 あなたの立場を選んでください",
+            ["家族", "支援員", "教員", "その他"]
+        )
 
 
 
-# --- ここから Day2（status入力） ---
+# ------------------------------
+# Step2：現在の状態
+# 子供や利用者さんの状態を選ぶカード
+# ------------------------------
+with st.container(border=True,key="step2_card"):
 
-st.subheader("Step2：現在の状態")
-st.caption("今、子供や利用者さんがどのような状態かを選んでください")
+    st.markdown("### 🌼 Step2：現在の状態")
+    st.caption("今、子供や利用者さんがどのような状態かを選んでください。")
 
-# ラジオボタンで状態を選ぶ
-status = st.radio(
-    "[必須]子供や利用者さんの今の状態を選んでください",
-    ["安定", "少し不安", "しんどい", "パニック"]
-)
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #fde68a;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 10px 0 16px 0;
+            background-color: #fffbeb;
+            color: #374151;
+        ">
+            <b>ここで入力すること</b><br>
+            今の様子に一番近い状態を1つ選びます。
+            迷う場合は、完全に一致していなくても近いものを選んでください。
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    status = st.radio(
+        "🌱 子供や利用者さんの今の状態を選んでください",
+        ["安定", "少し不安", "しんどい", "パニック"]
+    )
+
 
 #ログありの人だけ過去ログを表示する
 if st.session_state["condition"] == "ログあり":
@@ -280,7 +412,7 @@ if st.session_state["condition"] == "ログあり":
 
         if past_log.empty:
             # 同じ状態のログが1件もないとき
-            st.info("参考にできる過去の対応例は、まだありません")
+            st.info("参考にできる過去の対応例は、まだありません\n\n(ここは、保存していただくと次回より表示されるようになります)")
             st.write("表示された状況を見て、どう対応するかを入力してください")
             #最小限の支援（ログがないときだけ）
             st.write("ヒント:まずは落ち着いて,様子を確認しましょう")
@@ -304,66 +436,76 @@ if st.session_state["condition"] == "ログあり":
 
 # --- ここから Day2（action入力） ---
 
-st.markdown(
-    """
-    <div style="
-    border: 1px solid #ddd;
-    border-radius: 16px;
-    padding: 16px;
-    margin: 16px 0;
-    background-color: #f8fbff;
-    color: #1f2937;
-">
-    <h3 style="margin-bottom: 4px; color: #1f2937">🤖 Step3：AI支援ナビ</h3>
-    <p style="margin-bottom: 0; color: #374151;">困っていることに近いものを選んでください</p>
-</div>
+# ------------------------------
+# Step3：AI支援ナビ
+# 困りごとのカテゴリを選ぶカード
+# ------------------------------
+with st.container(border=True, key="step3_card"):
 
-""",
-unsafe_allow_html=True
-)
+    st.markdown("### 🤖 Step3：AI支援ナビ")
+    st.caption("困っていることに近いものを選んでください。")
 
-col1,col2 = st.columns(2)
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #bae6fd;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 10px 0 16px 0;
+            background-color: #f0f9ff;
+            color: #374151;
+        ">
+            <b>ここで入力すること</b><br>
+            今の困りごとに一番近いカテゴリを1つ選びます。
+            選んだ内容に合わせて、対応のヒントやAI対応例を確認できます。
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-with col1:
-    if st.button("💬 声かけに迷う", use_container_width=True):
-        st.session_state["support_category"] = "声かけに迷う"
-        st.session_state["ai_advice_requested"] = False
-        st.session_state["ai_advice_text"] = ""
-        st.session_state["ai_advice_source"] = ""
-        st.session_state["ai_error_message"] = ""
+    col1, col2 = st.columns(2)
 
-with col2:
-    if st.button("🌊 感情が高ぶっている", use_container_width=True):
-        st.session_state["support_category"] = "感情が高ぶっている"
-        st.session_state["ai_advice_requested"] = False
-        st.session_state["ai_advice_text"] = ""
-        st.session_state["ai_advice_source"] = ""
-        st.session_state["ai_error_message"] = ""
+    with col1:
+        if st.button("💬 声かけに迷う", use_container_width=True):
+            st.session_state["support_category"] = "声かけに迷う"
+            st.session_state["ai_advice_requested"] = False
+            st.session_state["ai_advice_text"] = ""
+            st.session_state["ai_advice_source"] = ""
+            st.session_state["ai_error_message"] = ""
 
-col3,col4 = st.columns(2)
+    with col2:
+        if st.button("🌊 感情が高ぶっている", use_container_width=True):
+            st.session_state["support_category"] = "感情が高ぶっている"
+            st.session_state["ai_advice_requested"] = False
+            st.session_state["ai_advice_text"] = ""
+            st.session_state["ai_advice_source"] = ""
+            st.session_state["ai_error_message"] = ""
 
-with col3:
-    if st.button("📅 予定変更で混乱している", use_container_width=True):
-        st.session_state["support_category"] = "予定変更で混乱している"
-        st.session_state["ai_advice_requested"] = False
-        st.session_state["ai_advice_text"] = ""
-        st.session_state["ai_advice_source"] = ""
-        st.session_state["ai_error_message"] = ""
+    col3, col4 = st.columns(2)
 
-with col4:
-    if st.button("🏠 外出を嫌がっている", use_container_width=True):
-        st.session_state["support_category"] = "外出を嫌がっている"
-        st.session_state["ai_advice_requested"] = False
-        st.session_state["ai_advice_text"] = ""
-        st.session_state["ai_advice_source"] = ""
-        st.session_state["ai_error_message"] = ""
-        
-if st.button("🫧 支援者自身が疲れている", use_container_width=True):
+    with col3:
+        if st.button("📅 予定変更で混乱している", use_container_width=True):
+            st.session_state["support_category"] = "予定変更で混乱している"
+            st.session_state["ai_advice_requested"] = False
+            st.session_state["ai_advice_text"] = ""
+            st.session_state["ai_advice_source"] = ""
+            st.session_state["ai_error_message"] = ""
+
+    with col4:
+        if st.button("🏠 外出を嫌がっている", use_container_width=True):
+            st.session_state["support_category"] = "外出を嫌がっている"
+            st.session_state["ai_advice_requested"] = False
+            st.session_state["ai_advice_text"] = ""
+            st.session_state["ai_advice_source"] = ""
+            st.session_state["ai_error_message"] = ""
+
+    if st.button("🫧 支援者自身が疲れている", use_container_width=True):
         st.session_state["support_category"] = "支援者自身が疲れている"
         st.session_state["ai_advice_requested"] = False
         st.session_state["ai_advice_text"] = ""
         st.session_state["ai_advice_source"] = ""
         st.session_state["ai_error_message"] = ""
+
 
 support_category = st.session_state["support_category"]
 
@@ -479,65 +621,132 @@ if support_category != "選択してください" and SHOW_BASIC_ADVICE:
                 )
     
 
-# テキスト入力（複数行）
-#支援者自身が疲れている場合は、対応内容を無理に書かせない
-if support_category == "支援者自身が疲れている":
-    action_label = "[任意]今の自分にできそうなこと、または記録しておきたいことを書いてください（空欄でも大丈夫です）"
-else:
-    action_label = "[必須]この場面で、どのように対応をしますか？"
+# ------------------------------
+# Step4：対応内容の記録
+# 実際の対応、または自分ならどう対応するかを書くカード
+# ------------------------------
+with st.container(border=True, key="step4_card"):
 
-action = st.text_area(action_label)
+    st.markdown("### 📝 Step4：対応内容の記録")
+    st.caption("AI支援ナビや対応のヒントを参考にして、この場面での対応内容を記録してください。")
 
-# [任意]補足メモは、必要な場合だけ入力してもらう
-memo = st.text_area("[任意]補足メモがあれば入力してください（空欄でも大丈夫です）", height=100)
-
-st.subheader("Step4：不安・負担感・対応結果")
-st.caption("この場面で感じた不安や負担、対応結果について選んでください")
-
-anxiety = st.radio(
-    "[必須]この場面で、対応を考えるときの不安はどのくらいですか？",
-    ["0:ぜんぜん大丈夫（見通しばっちり）", "1:ちょっとドキドキする", "2:まあまあ不安", "3:かなり不安", "4:パニックになりそう！"]
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #fed7aa;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 10px 0 16px 0;
+            background-color: #fff7ed;
+            color: #374151;
+        ">
+            <b>ここで入力すること</b><br>
+            実際に行った対応、または自分ならどう対応するかを短く書きます。
+            完璧な文章でなくても大丈夫です。
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-hesitation = st.radio(
-    "この場面で対応に迷いはありましたか？",
-    ["はい", "いいえ"]
+    # 支援者自身が疲れている場合は、対応内容を無理に書かせない
+    if support_category == "支援者自身が疲れている":
+        action_label = "[任意]今の自分にできそうなこと、または記録しておきたいことを書いてください（空欄でも大丈夫です）"
+    else:
+        action_label = "[必須]この場面で、どのように対応しますか？"
+
+    action = st.text_area(action_label)
+
+    memo = st.text_area(
+        "[任意]補足メモがあれば入力してください（空欄でも大丈夫です）",
+        height=100
     )
 
-consult_need = st.radio(
-    "この場面について、誰かに相談したいと思いますか？",
-    ["はい","いいえ"]
-)
+# ------------------------------
+# Step5：不安・負担感・対応結果
+# 評価項目を入力するカード
+# ------------------------------
+with st.container(border=True, key="step5_card"):
 
-if consult_need == "はい":
-    consult_who = st.radio(
-        "[任意]相談するとしたら、誰に相談しますか？",
-        ["家族", "支援員", "教員", "その他"]
+    st.markdown("### 📊 Step5：不安・負担感・対応結果")
+    st.caption("この場面で感じた不安や負担、対応結果について選んでください。")
+
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #d8b4fe;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 10px 0 16px 0;
+            background-color: #faf5ff;
+            color: #374151;
+        ">
+            <b>ここで入力すること</b><br>
+            この場面で感じた不安、迷い、相談の必要性、負担感、対応結果を選びます。
+            直感的に近いものを選んでください。
+        </div>
+        """,
+        unsafe_allow_html=True
     )
-else:
-    consult_who = ""
 
-#緊急度（どれくらい急いで対応・相談する必要があるか）を選ぶ
-urgency = st.radio(
-    "この場面では、どれくらい急いで対応・相談する必要がありますか？",
-    ["低い（様子を見てもよい）","中くらい（今日中には対応したい）","高い（すぐに対応・相談したい）"]
-)
+    anxiety = st.radio(
+        "[必須]この場面で、対応を考えるときの不安はどのくらいですか？",
+        [
+            "0:ぜんぜん大丈夫（見通しばっちり）",
+            "1:ちょっとドキドキする",
+            "2:まあまあ不安",
+            "3:かなり不安",
+            "4:パニックになりそう！"
+        ]
+    )
 
-#心理的負担：今回の対応がどれくらい大変だったか
-mental_load = st.radio(
-    "[必須]この場面で感じた心理的な負担はどのくらいありましたか？",
-    ["1:ほとんど負担はない", "2:少し負担がある","3:ある程度負担がある", "4:かなり負担がある","5:非常に負担が大きい"]
-)
+    hesitation = st.radio(
+        "この場面で対応に迷いはありましたか？",
+        ["はい", "いいえ"]
+    )
 
-is_success = st.radio(
-    "[必須]この場面での対応について、あなた自身はどのように感じましたか？",
-    ["うまくいったと思う",
-     "少しうまくいったと思う",
-     "どちらともいえない",
-     "あまりうまくいかなかったと思う",
-     "うまくいかなかったと思う"
-     ]
-)
+    consult_need = st.radio(
+        "この場面について、誰かに相談したいと思いますか？",
+        ["はい", "いいえ"]
+    )
+
+    if consult_need == "はい":
+        consult_who = st.radio(
+            "[任意]相談するとしたら、誰に相談しますか？",
+            ["家族", "支援員", "教員", "その他"]
+        )
+    else:
+        consult_who = ""
+
+    urgency = st.radio(
+        "この場面では、どれくらい急いで対応・相談する必要がありますか？",
+        [
+            "低い（様子を見てもよい）",
+            "中くらい（今日中には対応したい）",
+            "高い（すぐに対応・相談したい）"
+        ]
+    )
+
+    mental_load = st.radio(
+        "[必須]この場面で感じた心理的な負担はどのくらいありましたか？",
+        [
+            "1:ほとんど負担はない",
+            "2:少し負担がある",
+            "3:ある程度負担がある",
+            "4:かなり負担がある",
+            "5:非常に負担が大きい"
+        ]
+    )
+
+    is_success = st.radio(
+        "[必須]この場面での対応について、あなた自身はどのように感じましたか？",
+        [
+            "うまくいったと思う",
+            "少しうまくいったと思う",
+            "どちらともいえない",
+            "あまりうまくいかなかったと思う",
+            "うまくいかなかったと思う"
+        ]
+    )
 
 # 入力された内容を確認表示
 # st.write("入力された対応内容：", action)
@@ -754,37 +963,61 @@ def generate_ai_advice(ai_input_data):
 
         return get_basic_advice(ai_input_data)
 
-st.subheader("Step5: AIからの対応ヒント")
-st.caption("Step4までの入力内容をもとに、AIが対応のヒントを表示する予定です")
+# ------------------------------
+# Step6：AIからの対応ヒント
+# 入力内容をもとにAI対応例を表示するカード
+# ------------------------------
+with st.container(border=True, key="step6_card"):
 
-ai_consult_target = consult_who if consult_need == "はい" else "なし"
+    st.markdown("### 🤖 Step6：AIからの対応ヒント")
+    st.caption("ここまでの入力内容をもとに、対応を考えるためのヒントを表示します。")
 
-#AIに渡す情報を１つの箱にまとめる
-ai_input_data = {
-    "place": location,
-    "supporter_role": supporter,
-    "current_state": status,
-    "support_category": support_category,
-    "anxiety_level": anxiety,
-    "wants_consultation": consult_need,
-    "consultation_target": ai_consult_target,
-    "urgency_level": urgency,
-    "mental_load": mental_load,
-}
-#まとめた情報をもとに、AIへ渡す文章を作る
-ai_prompt = build_ai_prompt(ai_input_data)
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #86efac;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 10px 0 16px 0;
+            background-color: #f0fdf4;
+            color: #374151;
+        ">
+            <b>ここで確認すること</b><br>
+            AI対応例は、正解を決めるものではなく、支援者が次の対応を考えるための参考情報です。
+            必要に応じて、過去ログや自分の判断と合わせて確認してください。
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-if SHOW_AI_DEBUG:
+    ai_consult_target = consult_who if consult_need == "はい" else "なし"
 
-    st.markdown("#### AIに渡す予定の情報（確認用）")
-    st.caption("※現在はAI未接続です。確認用として表示しています")
+    # AIに渡す情報を1つの箱にまとめる
+    ai_input_data = {
+        "place": location,
+        "supporter_role": supporter,
+        "current_state": status,
+        "support_category": support_category,
+        "anxiety_level": anxiety,
+        "wants_consultation": consult_need,
+        "consultation_target": ai_consult_target,
+        "urgency_level": urgency,
+        "mental_load": mental_load,
+    }
 
-    #AIに渡す予定んお情報を折りたたみ表示にする
-    with st.expander("AIに渡す予定の情報を確認する",expanded=False):
-        
-        st.markdown("#### 入力データ")
+    # まとめた情報をもとに、AIへ渡す文章を作る
+    ai_prompt = build_ai_prompt(ai_input_data)
 
-        st.info(
+    if SHOW_AI_DEBUG:
+
+        st.markdown("#### AIに渡す予定の情報（確認用）")
+        st.caption("※開発者確認用です。実証時は通常表示しません。")
+
+        with st.expander("AIに渡す予定の情報を確認する", expanded=False):
+
+            st.markdown("#### 入力データ")
+
+            st.info(
                 f"場所 : {location}\n\n"
                 f"支援者の立場 : {supporter}\n\n"
                 f"現在の状態 : {status}\n\n"
@@ -794,120 +1027,157 @@ if SHOW_AI_DEBUG:
                 f"相談先 : {ai_consult_target}\n\n"
                 f"緊急度 : {urgency}\n\n"
                 f"心理的負担 : {mental_load}\n\n"
-        )
-        st.markdown("#### 入力データ")
+            )
 
-        st.text(ai_prompt)
+            st.markdown("#### AIに渡すプロンプト")
+            st.text(ai_prompt)
 
+    if support_category != "選択してください":
 
-if support_category != "選択してください":
+        if st.button("🤖 AI対応例を作成する", use_container_width=True):
+            st.session_state["ai_advice_requested"] = True
 
-    if st.button("AI対応例を作成する", use_container_width=True):
-        st.session_state["ai_advice_requested"] = True
+            # AI対応例がまだ作成されていない場合だけ作成する
+            if st.session_state["ai_advice_text"] == "":
+                ai_advice = generate_ai_advice(ai_input_data)
+                st.session_state["ai_advice_text"] = ai_advice
 
-        #AI対応例がまだ作成されていない場合だけ、AI対応例を作成する
-        if st.session_state["ai_advice_text"] == "":
-            ai_advice = generate_ai_advice(ai_input_data)
-            st.session_state["ai_advice_text"] = ai_advice
-
-    if st.session_state["ai_advice_requested"] and st.session_state["ai_advice_text"] != "":
-
-        # AI対応例をカード風の枠内に表示する
-        with st.container(border = True):
-            st.markdown("#### 🤖 AI対応例")
-            st.caption("※OpenAI APIが利用できない場合は、基本の対応例を表示します")
+        if st.session_state["ai_advice_requested"] and st.session_state["ai_advice_text"] != "":
 
             st.markdown(
-                "この対応例は、支援者が次の行動を考えるためのヒントです。"
-                "医療的判断や診断でなく、無理なく取れる対応を整理する目的で表示しています。"
+                """
+                <div style="
+                    border: 1px solid #86efac;
+                    border-radius: 14px;
+                    padding: 14px 16px;
+                    margin: 16px 0 8px 0;
+                    background-color: #f0fdf4;
+                    color: #374151;
+                ">
+                    <b>🤖 AI対応例</b><br>
+                    この対応例は、支援者が次の行動を考えるためのヒントです。
+                    医療的判断や診断ではありません。
+                </div>
+                """,
+                unsafe_allow_html=True
             )
 
             st.markdown(st.session_state["ai_advice_text"])
-else:
-    st.warning("AI対応例を表示するには、先に困りごとのカテゴリを選んでください")
+
+            if st.session_state["ai_advice_source"] == "basic_fallback":
+                st.caption("※OpenAI APIが利用できない場合は、基本の対応例を表示しています。")
+
+    else:
+        st.warning("AI対応例を表示するには、先にStep3で困りごとのカテゴリを選んでください。")
 
 # --- ここまで ---
 
 # --- ここから 保存ボタン（まだSheetsには保存しない） ---
 
-st.caption("入力が終わったら、下の保存ボタンを押してください。")
-if st.button("保存"):
+# ------------------------------
+# Step7：保存
+# 入力内容をGoogle Sheetsに保存するカード
+# ------------------------------
+with st.container(border=True, key="step7_card"):
 
-    #ログイン前・計測開始前なら保存させない
-    if st.session_state["start_time"] is None:
-        st.error("先にログインしてください")
-        st.stop()
+    st.markdown("### 💾 Step7：入力内容を保存")
+    st.caption("ここまで入力した内容を確認し、最後に保存してください。")
 
-    #conditionが空なら保存させない
-    if st.session_state["condition"] == "":
-        st.error("条件が取得できていません。もう一度ログインしてください")
-        st.stop()
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #f9a8d4;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 10px 0 16px 0;
+            background-color: #fff7fb;
+            color: #374151;
+        ">
+            <b>最後にすること</b><br>
+            入力が終わったら、下の保存ボタンを押してください。
+            保存後、今回の記録がGoogle Sheetsに追加されます。
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    if support_category == "選択してください":
-        st.error("困りごとのカテゴリを選択してください")
-        st.stop()
+    if st.button("💾 保存する", use_container_width=True):
 
-    #支援者自身が疲れている場合以外は、対応内容を必須にする
-    if support_category != "支援者自身が疲れている" and action.strip() == "":
-        st.error("対応内容を入力してください.実際の対応、または自分ならどう対応するかを書いてください")
-        st.stop()
+        #ログイン前・計測開始前なら保存させない
+        if st.session_state["start_time"] is None:
+            st.error("先にログインしてください")
+            st.stop()
+
+        #conditionが空なら保存させない
+        if st.session_state["condition"] == "":
+            st.error("条件が取得できていません。もう一度ログインしてください")
+            st.stop()
+
+        if support_category == "選択してください":
+            st.error("困りごとのカテゴリを選択してください")
+            st.stop()
+
+        #支援者自身が疲れている場合以外は、対応内容を必須にする
+        if support_category != "支援者自身が疲れている" and action.strip() == "":
+            st.error("対応内容を入力してください.実際の対応、または自分ならどう対応するかを書いてください")
+            st.stop()
 
     # 今の時間を作る
-    now = pd.Timestamp.now(tz="Asia/Tokyo").strftime("%Y-%m-%d %H:%M:%S")
+        now = pd.Timestamp.now(tz="Asia/Tokyo").strftime("%Y-%m-%d %H:%M:%S")
 
-    # 既存データを読み込み
-    old_data = conn.read(worksheet="supporter_log", ttl=0)
+        # 既存データを読み込み
+        old_data = conn.read(worksheet="supporter_log", ttl=0)
 
-    #1件ごとの記録IDを作る
-    record_id = "R" + str(pd.Timestamp.now().timestamp()).replace(".","")
+        #1件ごとの記録IDを作る
+        record_id = "R" + str(pd.Timestamp.now().timestamp()).replace(".","")
 
-    #判断にかかった秒数 小数点2桁にする
-    decision_time = round(time.time() - st.session_state["start_time"],2)
+        #判断にかかった秒数 小数点2桁にする
+        decision_time = round(time.time() - st.session_state["start_time"],2)
 
-    # 対応結果を分析しやすいように数値へ変換する
-    success_score_map = {
-        "うまくいったと思う": 5,
-        "少しうまくいったと思う": 4,
-        "どちらともいえない": 3,
-        "あまりうまくいかなかったと思う": 2,
-        "うまくいかなかったと思う": 1
-    }
-    is_success_score = success_score_map[is_success]
+        # 対応結果を分析しやすいように数値へ変換する
+        success_score_map = {
+            "うまくいったと思う": 5,
+            "少しうまくいったと思う": 4,
+            "どちらともいえない": 3,
+            "あまりうまくいかなかったと思う": 2,
+            "うまくいかなかったと思う": 1
+        }
+        is_success_score = success_score_map[is_success]
 
-    #今回追加する1行を作る
-    new_data = pd.DataFrame([{
-        "record_id": record_id,
-        "created_at": now,
-        "participant_id": st.session_state["participant_id"],
-        "supporter": supporter,
-        "seen_status": status,
-        "support_category": support_category,
-        "ai_advice_text": st.session_state["ai_advice_text"],
-        "ai_advice_source": st.session_state["ai_advice_source"],
-        "ai_error_message": st.session_state["ai_error_message"],
-        "action": action,
-        "memo": memo,
-        "location": location,
-        "anxiety": int(anxiety[0]),
-        "hesitation": hesitation,
-        "consult_need": consult_need,
-        "consult_who": consult_who,
-        "urgency": urgency,
-        "mental_load": int(mental_load[0]),
-        "decision_time_sec": decision_time,
-        "condition": st.session_state["condition"],
-        "is_success": is_success,
-        "is_success_score": is_success_score,
-       
-        }])
+        #今回追加する1行を作る
+        new_data = pd.DataFrame([{
+            "record_id": record_id,
+            "created_at": now,
+            "participant_id": st.session_state["participant_id"],
+            "supporter": supporter,
+            "seen_status": status,
+            "support_category": support_category,
+            "ai_advice_text": st.session_state["ai_advice_text"],
+            "ai_advice_source": st.session_state["ai_advice_source"],
+            "ai_error_message": st.session_state["ai_error_message"],
+            "action": action,
+            "memo": memo,
+            "location": location,
+            "anxiety": int(anxiety[0]),
+            "hesitation": hesitation,
+            "consult_need": consult_need,
+            "consult_who": consult_who,
+            "urgency": urgency,
+            "mental_load": int(mental_load[0]),
+            "decision_time_sec": decision_time,
+            "condition": st.session_state["condition"],
+            "is_success": is_success,
+            "is_success_score": is_success_score,
+        
+            }])
 
-    # 新しいデータを追加
-    df = pd.concat([old_data, new_data],ignore_index=True)
+        # 新しいデータを追加
+        df = pd.concat([old_data, new_data],ignore_index=True)
 
-    # Sheetsに書き込み
-    conn.update(worksheet="supporter_log",data=df)
+        # Sheetsに書き込み
+        conn.update(worksheet="supporter_log",data=df)
 
-    st.success("保存しました。ご協力ありがとうございました。")
+        st.success("保存しました。ご協力ありがとうございました。")
 
     # if consult_need == "はい" and consult_who=="家族":
     #     st.write("家族に相談する判断をしました")
