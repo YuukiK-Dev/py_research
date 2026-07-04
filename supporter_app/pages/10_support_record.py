@@ -138,8 +138,9 @@ if "ai_error_message" not in st.session_state:
 # ------------------------------
 # 画面のタイトル表示
 # ------------------------------
-st.title("予習型ログアプリ")
-st.subheader("Day1：ログインと接続")
+if not st.session_state["is_logged_in"]:
+    st.title("AI支援ナビ")
+    st.subheader("個別最適化支援アプリ")
 
 # ------------------------------
 # Google Sheets に接続する
@@ -166,86 +167,84 @@ except Exception:
 
 # ------------------------------
 # 入力欄を表示する
-# participant_id と passcode をユーザーに入れてもらう
+# ログインしていないときだけ、IDとパスワード入力欄を表示する
 # ------------------------------
-st.write("配付された_id と 配付されたパスワード を入力してください")
+if not st.session_state["is_logged_in"]:
 
-participant_id = st.text_input("配付されたID")
-passcode = st.text_input("配付されたパスワード", type="password")
+    st.write("配付されたIDと配付されたパスワードを入力してください")
 
-input_id = str(participant_id).strip()
-input_pass = str(passcode).strip()
+    participant_id = st.text_input("配付されたID")
+    passcode = st.text_input("配付されたパスワード", type="password")
 
-# ------------------------------
-# ログインボタンを押したときの処理
-# ------------------------------
-if st.button("ログイン"):
-
-    # --------------------------
-    # 入力された文字の前後の空白を消す
-    # 例： " P01 " → "P01"
-    # --------------------------
     input_id = str(participant_id).strip()
     input_pass = str(passcode).strip()
 
-    # --------------------------
-    # 何も入力されていないときはエラーにする
-    # --------------------------
-    if input_id == "" or input_pass == "":
-        st.error("配付された_id と配付されたパスワードの両方を入力してください")
-        st.stop()
+    # ------------------------------
+    # ログインボタンを押したときの処理
+    # ------------------------------
+    if st.button("ログイン"):
 
-    # --------------------------
-    # usersシート側のデータも文字としてそろえる
-    # 空白も消しておく
-    # --------------------------
-    users_df["participant_id"] = users_df["participant_id"].astype(str).str.strip()
-    users_df["passcode"] = users_df["passcode"].apply(
-        lambda x: str(int(float(x))).strip() if pd.notna(x) else ""
-    )
+        # --------------------------
+        # 入力された文字の前後の空白を消す
+        # 例： " P01 " → "P01"
+        # --------------------------
+        input_id = str(participant_id).strip()
+        input_pass = str(passcode).strip()
 
-    # --------------------------
-    # 入力した participant_id と passcode の両方が一致する行を探す
-    # 一致する行が1つでもあればログイン成功
-    # --------------------------
-    matched_user = users_df[
-        (users_df["participant_id"] == input_id) &
-        (users_df["passcode"] == input_pass)
-    ]
-
-    if not matched_user.empty:
-        st.success("ログイン成功")
-        # st.write("ログインID:", input_id)
-        st.session_state["start_time"] = time.time()
-
-        # ログイン成功状態にする
-        st.session_state["is_logged_in"] = True
-
-        # ログインしたIDを保存する
-        st.session_state["participant_id"] = input_id
-
-    
-
-        #userシートのcondition列から、この人の条件を取り出す
-        condition = matched_user.iloc[0]["condition"]
-
-         #conditionが空なら、この先に進ませない
-        if str(condition).strip() == "":
-            st.error("このIDは現在使用できません。管理者へ連絡してください")
+        # --------------------------
+        # 何も入力されていないときはエラーにする
+        # --------------------------
+        if input_id == "" or input_pass == "":
+            st.error("配付されたIDと配付されたパスワードの両方を入力してください")
             st.stop()
 
-        #あとで保存時に使えるように、session_stateに覚えておく
-        # 前後の空白を消して、ログあり/ログなし判定を安定させる
-        st.session_state["condition"] = str(condition).strip()
+        # --------------------------
+        # usersシート側のデータも文字としてそろえる
+        # 空白も消しておく
+        # --------------------------
+        users_df["participant_id"] = users_df["participant_id"].astype(str).str.strip()
+        users_df["passcode"] = users_df["passcode"].apply(
+            lambda x: str(int(float(x))).strip() if pd.notna(x) else ""
+        )
 
-       
+        # --------------------------
+        # 入力した participant_id と passcode の両方が一致する行を探す
+        # 一致する行が1つでもあればログイン成功
+        # --------------------------
+        matched_user = users_df[
+            (users_df["participant_id"] == input_id) &
+            (users_df["passcode"] == input_pass)
+        ]
 
-        #いま取得できたcondition　を確認表示する
-        # st.write("condition:", condition)
-        # st.write("conditionの中身確認:", repr(condition))
+        if not matched_user.empty:
+            # st.success("ログイン成功")
+            # st.write("ログインID:", input_id)
 
-    else:
-        st.error("ID または パスワード が違います")
+            st.session_state["start_time"] = time.time()
+
+            # ログイン成功状態にする
+            st.session_state["is_logged_in"] = True
+
+            # ログインしたIDを保存する
+            st.session_state["participant_id"] = input_id
+
+            # usersシートのcondition列から、この人の条件を取り出す
+            condition = matched_user.iloc[0]["condition"]
+
+            # conditionが空なら、この先に進ませない
+            if str(condition).strip() == "":
+                st.error("このIDは現在使用できません。管理者へ連絡してください")
+                st.stop()
+
+            # あとで保存時に使えるように、session_stateに覚えておく
+            # 前後の空白を消して、ログあり/ログなし判定を安定させる
+            st.session_state["condition"] = str(condition).strip()
+
+            # ログイン情報を保存できましたので、画面を再度読み込みしてstep1へ進む
+            st.rerun()
+
+        else:
+            st.error("ID または パスワード が違います")
 
 #ログインしていない場合は、ここで止める
 if not st.session_state["is_logged_in"]:
