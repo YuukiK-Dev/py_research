@@ -125,6 +125,10 @@ if "ai_advice_requested" not in st.session_state:
 if "ai_advice_text" not in st.session_state:
     st.session_state["ai_advice_text"] = ""
 
+#対応内容の入力を覚えておく箱
+if "action_text" not in st.session_state:
+    st.session_state["action_text"] = ""
+
 #AI対応例がどこから作られたかを覚えておく箱
 #例 : openai / basic_fallback
 if "ai_advice_source" not in st.session_state:
@@ -133,6 +137,10 @@ if "ai_advice_source" not in st.session_state:
 #AI生成に失敗したときの理由を一時保存しておく箱
 if "ai_error_message" not in st.session_state:
     st.session_state["ai_error_message"] = ""
+
+#保存が完了したかを覚えて億箱
+if "record_saved" not in st.session_state:
+    st.session_state["record_saved"] = False
 
 
 # ------------------------------
@@ -149,21 +157,19 @@ if not st.session_state["is_logged_in"]:
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # ------------------------------
-# users シートを読む
-# このシートは「本人確認専用」の表
-# 使う列は
-# ・participant_id
-# ・passcode
-# の2つ
 # ------------------------------
-try:
-    users_df = conn.read(worksheet="users", ttl=0)
-    users_df = pd.DataFrame(users_df)
-except Exception:
-    # 読み込みに失敗したら、ここで止める
-    st.error("Google Sheets の読み込みに失敗しました")
-    st.error("secrets.toml や シート名 users を確認してください")
-    st.stop()
+# users シートを読む
+# ログインしていないときだけ、本人確認用に読み込む
+# ------------------------------
+if not st.session_state["is_logged_in"]:
+    try:
+        users_df = conn.read(worksheet="users", ttl=0)
+        users_df = pd.DataFrame(users_df)
+    except Exception:
+        # 読み込みに失敗したら、ここで止める
+        st.error("Google Sheets の読み込みに失敗しました")
+        st.error("secrets.toml や シート名 users を確認してください")
+        st.stop()
 
 # ------------------------------
 # 入力欄を表示する
@@ -261,7 +267,49 @@ if not st.session_state["is_logged_in"]:
 # st.info(f"現在の入力モードは： {st.session_state['condition']}")
 # st.caption("※ログイン後から保存ボタンを押すまでの時間は、自動で記録されます")
 
-   
+# ------------------------------
+# 入力の進行状況を計算する
+# ------------------------------
+progress_step = 2
+progress_label = "Step3を選んでください"
+
+if st.session_state["support_category"] != "選択してください":
+    progress_step = 3
+    progress_label = "Step4の対応内容へ"
+
+if st.session_state["action_text"].strip() != "":
+    progress_step = 5
+    progress_label = "Step5を入力中"
+
+if st.session_state["support_category"] == "支援者自身が疲れている":
+    progress_step = 5
+    progress_label = "Step5を入力中"
+
+if st.session_state["ai_advice_text"].strip() != "":
+    progress_step = 6
+    progress_label = "Step7で保存へ"
+
+if st.session_state["record_saved"]:
+    progress_step = 7
+    progress_label = "保存完了"
+
+progress_percent = int(progress_step / 7 * 100)
+
+
+
+st.markdown(
+    f"""
+<div style="position: fixed; top: 120px; left: calc(50% + 390px); z-index: 9999; background-color: #ffffff; border: 1.5px solid #f472b6; border-radius: 18px; padding: 12px 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14); font-size: 13px; color: #374151; font-weight: bold; width: 150px;">
+    <div style="margin-bottom: 6px;">入力状況</div>
+    <div style="font-size: 12px; margin-bottom: 8px;">{progress_label}</div>
+    <div style="width: 100%; height: 8px; background-color: #fce7f3; border-radius: 999px; overflow: hidden; margin-bottom: 6px;">
+        <div style="width: {progress_percent}%; height: 100%; background-color: #f472b6; border-radius: 999px;"></div>
+    </div>
+    <div style="font-size: 11px; color: #6b7280;">{progress_step} / 7</div>
+</div>
+    """,
+    unsafe_allow_html=True
+)
 
 # ------------------------------
 # Step1：基本情報
@@ -369,7 +417,11 @@ if st.session_state["condition"] == "ログあり":
 
         #条件の明示（研究的に重要）
         # st.caption("※あなたは「ログあり」条件です")
-        st.write(f"※「{status}」に近い状態で、以前うまくいった対応例を表示しています")
+        st.info(
+            f"過去ログは、以前の似た場面で参考になった対応を見返すための情報です。\n\n"
+            f"今は「{status}」に近い状態で、以前うまくいった対応例を表示しています。\n\n"
+            "まったく同じ対応をする必要はありません。今回の状況に合わせて、参考にしてください。"
+        )
         
 
         #supporter_logを読み込む
@@ -442,7 +494,7 @@ if st.session_state["condition"] == "ログあり":
 with st.container(border=True, key="step3_card"):
 
     st.markdown("### 🤖 Step3：AI支援ナビ")
-    st.caption("困っていることに近いものを選んでください。")
+    st.caption("今の困りごとを整理し、対応のヒントを選びやすくするためのステップです。")
 
     st.markdown(
         """
@@ -455,8 +507,8 @@ with st.container(border=True, key="step3_card"):
             color: #374151;
         ">
             <b>ここで入力すること</b><br>
-            今の困りごとに一番近いカテゴリを1つ選びます。
-            選んだ内容に合わせて、対応のヒントやAI対応例を確認できます。
+            今の困りごとをカテゴリに分けて、対応を考えやすくします。
+            AIに答えを任せるのではなく、支援者が次の対応を考えるための手がかりを整理します。
         </div>
         """,
         unsafe_allow_html=True
@@ -653,7 +705,10 @@ with st.container(border=True, key="step4_card"):
     else:
         action_label = "[必須]この場面で、どのように対応しますか？"
 
-    action = st.text_area(action_label)
+    action = st.text_area(
+        action_label,
+        key="action_text"
+    )
 
     memo = st.text_area(
         "[任意]補足メモがあれば入力してください（空欄でも大丈夫です）",
@@ -969,7 +1024,7 @@ def generate_ai_advice(ai_input_data):
 with st.container(border=True, key="step6_card"):
 
     st.markdown("### 🤖 Step6：AIからの対応ヒント")
-    st.caption("ここまでの入力内容をもとに、対応を考えるためのヒントを表示します。")
+    st.caption("入力内容をもとに、次の対応を考えるヒントを確認します。")
 
     st.markdown(
         """
@@ -982,8 +1037,9 @@ with st.container(border=True, key="step6_card"):
             color: #374151;
         ">
             <b>ここで確認すること</b><br>
-            AI対応例は、正解を決めるものではなく、支援者が次の対応を考えるための参考情報です。
-            必要に応じて、過去ログや自分の判断と合わせて確認してください。
+            AIヒントは、支援者の判断を置き換えるものではありません。
+            ここまでの入力内容をもとに、次の対応を考えるための参考情報として確認します。
+            必要に応じて、過去ログ、自分の経験、周囲への相談と合わせて使ってください。
         </div>
         """,
         unsafe_allow_html=True
@@ -1100,85 +1156,90 @@ with st.container(border=True, key="step7_card"):
         unsafe_allow_html=True
     )
 
-    if st.button("💾 保存する", use_container_width=True):
+    if st.session_state["record_saved"]:
+        st.success("保存しました。ご協力ありがとうございました")
 
-        #ログイン前・計測開始前なら保存させない
-        if st.session_state["start_time"] is None:
-            st.error("先にログインしてください")
-            st.stop()
+    else:
+        if st.button("💾 保存する", use_container_width=True):
 
-        #conditionが空なら保存させない
-        if st.session_state["condition"] == "":
-            st.error("条件が取得できていません。もう一度ログインしてください")
-            st.stop()
+            #ログイン前・計測開始前なら保存させない
+            if st.session_state["start_time"] is None:
+                st.error("先にログインしてください")
+                st.stop()
 
-        if support_category == "選択してください":
-            st.error("困りごとのカテゴリを選択してください")
-            st.stop()
+            #conditionが空なら保存させない
+            if st.session_state["condition"] == "":
+                st.error("条件が取得できていません。もう一度ログインしてください")
+                st.stop()
 
-        #支援者自身が疲れている場合以外は、対応内容を必須にする
-        if support_category != "支援者自身が疲れている" and action.strip() == "":
-            st.error("対応内容を入力してください.実際の対応、または自分ならどう対応するかを書いてください")
-            st.stop()
+            if support_category == "選択してください":
+                st.error("困りごとのカテゴリを選択してください")
+                st.stop()
 
-    # 今の時間を作る
-        now = pd.Timestamp.now(tz="Asia/Tokyo").strftime("%Y-%m-%d %H:%M:%S")
+            #支援者自身が疲れている場合以外は、対応内容を必須にする
+            if support_category != "支援者自身が疲れている" and action.strip() == "":
+                st.error("対応内容を入力してください.実際の対応、または自分ならどう対応するかを書いてください")
+                st.stop()
 
-        # 既存データを読み込み
-        old_data = conn.read(worksheet="supporter_log", ttl=0)
+            # 今の時間を作る
+            now = pd.Timestamp.now(tz="Asia/Tokyo").strftime("%Y-%m-%d %H:%M:%S")
 
-        #1件ごとの記録IDを作る
-        record_id = "R" + str(pd.Timestamp.now().timestamp()).replace(".","")
+            # 既存データを読み込み
+            old_data = conn.read(worksheet="supporter_log", ttl=0)
 
-        #判断にかかった秒数 小数点2桁にする
-        decision_time = round(time.time() - st.session_state["start_time"],2)
+            #1件ごとの記録IDを作る
+            record_id = "R" + str(pd.Timestamp.now().timestamp()).replace(".","")
 
-        # 対応結果を分析しやすいように数値へ変換する
-        success_score_map = {
-            "うまくいったと思う": 5,
-            "少しうまくいったと思う": 4,
-            "どちらともいえない": 3,
-            "あまりうまくいかなかったと思う": 2,
-            "うまくいかなかったと思う": 1
-        }
-        is_success_score = success_score_map[is_success]
+            #判断にかかった秒数 小数点2桁にする
+            decision_time = round(time.time() - st.session_state["start_time"],2)
 
-        #今回追加する1行を作る
-        new_data = pd.DataFrame([{
-            "record_id": record_id,
-            "created_at": now,
-            "participant_id": st.session_state["participant_id"],
-            "supporter": supporter,
-            "seen_status": status,
-            "support_category": support_category,
-            "ai_advice_text": st.session_state["ai_advice_text"],
-            "ai_advice_source": st.session_state["ai_advice_source"],
-            "ai_error_message": st.session_state["ai_error_message"],
-            "action": action,
-            "memo": memo,
-            "location": location,
-            "anxiety": int(anxiety[0]),
-            "hesitation": hesitation,
-            "consult_need": consult_need,
-            "consult_who": consult_who,
-            "urgency": urgency,
-            "mental_load": int(mental_load[0]),
-            "decision_time_sec": decision_time,
-            "condition": st.session_state["condition"],
-            "is_success": is_success,
-            "is_success_score": is_success_score,
-        
-            }])
+            # 対応結果を分析しやすいように数値へ変換する
+            success_score_map = {
+                "うまくいったと思う": 5,
+                "少しうまくいったと思う": 4,
+                "どちらともいえない": 3,
+                "あまりうまくいかなかったと思う": 2,
+                "うまくいかなかったと思う": 1
+            }
+            is_success_score = success_score_map[is_success]
 
-        # 新しいデータを追加
-        df = pd.concat([old_data, new_data],ignore_index=True)
+            #今回追加する1行を作る
+            new_data = pd.DataFrame([{
+                "record_id": record_id,
+                "created_at": now,
+                "participant_id": st.session_state["participant_id"],
+                "supporter": supporter,
+                "seen_status": status,
+                "support_category": support_category,
+                "ai_advice_text": st.session_state["ai_advice_text"],
+                "ai_advice_source": st.session_state["ai_advice_source"],
+                "ai_error_message": st.session_state["ai_error_message"],
+                "action": action,
+                "memo": memo,
+                "location": location,
+                "anxiety": int(anxiety[0]),
+                "hesitation": hesitation,
+                "consult_need": consult_need,
+                "consult_who": consult_who,
+                "urgency": urgency,
+                "mental_load": int(mental_load[0]),
+                "decision_time_sec": decision_time,
+                "condition": st.session_state["condition"],
+                "is_success": is_success,
+                "is_success_score": is_success_score,
+            
+                }])
 
-        # Sheetsに書き込み
-        conn.update(worksheet="supporter_log",data=df)
+            # 新しいデータを追加
+            df = pd.concat([old_data, new_data],ignore_index=True)
 
-        st.success("保存しました。ご協力ありがとうございました。")
+            # Sheetsに書き込み
+            conn.update(worksheet="supporter_log",data=df)
 
-    # if consult_need == "はい" and consult_who=="家族":
-    #     st.write("家族に相談する判断をしました")
+            st.session_state["record_saved"] = True
+            st.rerun()
+
+        # if consult_need == "はい" and consult_who=="家族":
+        #     st.write("家族に相談する判断をしました")
 
 # --- ここまで ---
