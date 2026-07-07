@@ -203,6 +203,51 @@ if not st.session_state["is_logged_in"]:
         if input_id == "" or input_pass == "":
             st.error("配付されたIDと配付されたパスワードの両方を入力してください")
             st.stop()
+            st.title("AI支援ナビ")
+            st.caption("過去ログとAIヒントを参考に、次の対応を考えやすくする支援アプリです。")
+
+            st.markdown(
+            """
+            <div style="
+                border: 1.5px solid #f9a8d4;
+                border-radius: 16px;
+                padding: 12px 16px;
+                margin: 10px 0 18px 0;
+                background-color: #fff7fb;
+                color: #374151;
+            ">
+                <b>ログインできました。</b><br>
+                この画面では、Step1からStep7まで上から順番に入力します。<br>
+                まずは「入力の全体の流れ」を確認してから、Step1へ進んでください。
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ------------------------------
+        # ログイン後のヘッダー表示
+        # ログイン後も、何のアプリか・何をする画面かが分かるようにする
+        # ------------------------------
+        st.title("AI支援ナビ")
+        st.caption("過去ログとAIヒントを参考に、次の対応を考えやすくする支援アプリです。")
+
+        st.markdown(
+            """
+            <div style="
+                border: 1.5px solid #f9a8d4;
+                border-radius: 16px;
+                padding: 12px 16px;
+                margin: 10px 0 18px 0;
+                background-color: #fff7fb;
+                color: #374151;
+            ">
+                <b>ログインできました。</b><br>
+                この画面では、Step1からStep7まで上から順番に入力します。<br>
+                まずは「はじめに：このアプリの使い方」を確認してから、Step1へ進んでください。
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
         # --------------------------
         # usersシート側のデータも文字としてそろえる
@@ -310,6 +355,52 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+# ------------------------------
+# はじめに：入力の全体の流れ
+# 利用者が最初に全体像をつかめるようにする説明カード
+# ------------------------------
+with st.container(border=True):
+    st.markdown("#### はじめに：入力の全体の流れ")
+
+    st.markdown(
+        """
+        このアプリは、支援場面の状況を上から順番に記録していくアプリです。
+
+        まず、基本情報を選び、現在の状態、困りごと、対応内容、
+        不安や負担感を入力します。
+
+        最後にAIヒントを確認し、入力内容を保存します。
+
+        詳しい入力内容は、各Stepの「ここで入力すること」を確認してください。
+        """
+    )
+
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #fbcfe8;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 12px 0 4px 0;
+            background-color: #fff7fb;
+            color: #374151;
+        ">
+            <b>入力の順番</b><br>
+            Step1：基本情報<br>
+            Step2：現在の状態<br>
+            Step3：AI支援ナビ<br>
+            Step4：対応内容の記録<br>
+            Step5：不安・負担感・対応結果<br>
+            Step6：AIからの対応ヒント<br>
+            Step7：入力内容を保存
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+
 
 # ------------------------------
 # Step1：基本情報
