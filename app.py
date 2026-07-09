@@ -7,6 +7,38 @@ import pytz
 # 1. ページ設定（必ず最初）
 st.set_page_config(page_title="状況確認アプリ", layout="centered")
 
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(180deg, #fff7fb 0%, #f2f7ff 100%);
+}
+            
+h1, h2, h3, p, label {
+    color: #334155 !important;
+}
+
+[data-testid="stMarkdownContainer"] {
+    color: #334155 !important;
+}
+
+.stButton > button {
+    background-color: #ffffff;
+    border: 2px solid #f6b6d2;
+    border-radius: 18px;
+    padding: 14px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #4a5568;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.stButton > button:hover {
+    background-color: #fff0f6;
+    border-color: #ec8fbd;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # （デバッグ：問題が解決したら消してOK）
 # st.write("connections keys:", list(st.secrets.get("connections", {}).keys()))
 # st.write("has service_account:", "service_account" in st.secrets.get("connections", {}).get("gsheets", {}))

@@ -89,7 +89,7 @@ st.markdown(
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 import time
-SHOW_AI_DEBUG = False
+SHOW_AI_DEBUG = True
 
 # 基本の対応例を画面に表示するかどうかを切り替える設定
 # True : API未接続・開発中は表示する
@@ -146,6 +146,11 @@ if "record_saved" not in st.session_state:
 # ------------------------------
 # 画面のタイトル表示
 # ------------------------------
+if st.session_state.get("login_success_message", False):
+    st.success("ログインできました")
+    st.session_state["login_success_message"] = False
+
+
 if not st.session_state["is_logged_in"]:
     st.title("AI支援ナビ")
     st.subheader("個別最適化支援アプリ")
@@ -163,8 +168,12 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # ------------------------------
 if not st.session_state["is_logged_in"]:
     try:
-        users_df = conn.read(worksheet="users", ttl=0)
-        users_df = pd.DataFrame(users_df)
+        if "users_df" not in st.session_state:
+            with st.spinner("読み込み中です。しばらくお待ちください"):
+                st.session_state["users_df"] = conn.read(worksheet="users", ttl=0)
+
+        users_df = st.session_state["users_df"]
+            
     except Exception:
         # 読み込みに失敗したら、ここで止める
         st.error("Google Sheets の読み込みに失敗しました")
@@ -203,51 +212,13 @@ if not st.session_state["is_logged_in"]:
         if input_id == "" or input_pass == "":
             st.error("配付されたIDと配付されたパスワードの両方を入力してください")
             st.stop()
-            st.title("AI支援ナビ")
-            st.caption("過去ログとAIヒントを参考に、次の対応を考えやすくする支援アプリです。")
-
-            st.markdown(
-            """
-            <div style="
-                border: 1.5px solid #f9a8d4;
-                border-radius: 16px;
-                padding: 12px 16px;
-                margin: 10px 0 18px 0;
-                background-color: #fff7fb;
-                color: #374151;
-            ">
-                <b>ログインできました。</b><br>
-                この画面では、Step1からStep7まで上から順番に入力します。<br>
-                まずは「入力の全体の流れ」を確認してから、Step1へ進んでください。
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+            
 
         # ------------------------------
         # ログイン後のヘッダー表示
         # ログイン後も、何のアプリか・何をする画面かが分かるようにする
         # ------------------------------
-        st.title("AI支援ナビ")
-        st.caption("過去ログとAIヒントを参考に、次の対応を考えやすくする支援アプリです。")
-
-        st.markdown(
-            """
-            <div style="
-                border: 1.5px solid #f9a8d4;
-                border-radius: 16px;
-                padding: 12px 16px;
-                margin: 10px 0 18px 0;
-                background-color: #fff7fb;
-                color: #374151;
-            ">
-                <b>ログインできました。</b><br>
-                この画面では、Step1からStep7まで上から順番に入力します。<br>
-                まずは「はじめに：このアプリの使い方」を確認してから、Step1へ進んでください。
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+       
 
         # --------------------------
         # usersシート側のデータも文字としてそろえる
@@ -275,6 +246,8 @@ if not st.session_state["is_logged_in"]:
 
             # ログイン成功状態にする
             st.session_state["is_logged_in"] = True
+            st.session_state["login_success_message"] = True
+            
 
             # ログインしたIDを保存する
             st.session_state["participant_id"] = input_id
@@ -312,49 +285,49 @@ if not st.session_state["is_logged_in"]:
 # st.info(f"現在の入力モードは： {st.session_state['condition']}")
 # st.caption("※ログイン後から保存ボタンを押すまでの時間は、自動で記録されます")
 
-# ------------------------------
-# 入力の進行状況を計算する
-# ------------------------------
-progress_step = 2
-progress_label = "Step3を選んでください"
+# # ------------------------------
+# # 入力の進行状況を計算する
+# # ------------------------------
+# progress_step = 2
+# progress_label = "Step3を選んでください"
 
-if st.session_state["support_category"] != "選択してください":
-    progress_step = 3
-    progress_label = "Step4の対応内容へ"
+# if st.session_state["support_category"] != "選択してください":
+#     progress_step = 3
+#     progress_label = "Step4の対応内容へ"
 
-if st.session_state["action_text"].strip() != "":
-    progress_step = 5
-    progress_label = "Step5を入力中"
+# if st.session_state["action_text"].strip() != "":
+#     progress_step = 5
+#     progress_label = "Step5を入力中"
 
-if st.session_state["support_category"] == "支援者自身が疲れている":
-    progress_step = 5
-    progress_label = "Step5を入力中"
+# if st.session_state["support_category"] == "支援者自身が疲れている":
+#     progress_step = 5
+#     progress_label = "Step5を入力中"
 
-if st.session_state["ai_advice_text"].strip() != "":
-    progress_step = 6
-    progress_label = "Step7で保存へ"
+# if st.session_state["ai_advice_text"].strip() != "":
+#     progress_step = 6
+#     progress_label = "Step7で保存へ"
 
-if st.session_state["record_saved"]:
-    progress_step = 7
-    progress_label = "保存完了"
+# if st.session_state["record_saved"]:
+#     progress_step = 7
+#     progress_label = "保存完了"
 
-progress_percent = int(progress_step / 7 * 100)
+# progress_percent = int(progress_step / 7 * 100)
 
 
 
-st.markdown(
-    f"""
-<div style="position: fixed; top: 120px; left: calc(50% + 390px); z-index: 9999; background-color: #ffffff; border: 1.5px solid #f472b6; border-radius: 18px; padding: 12px 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14); font-size: 13px; color: #374151; font-weight: bold; width: 150px;">
-    <div style="margin-bottom: 6px;">入力状況</div>
-    <div style="font-size: 12px; margin-bottom: 8px;">{progress_label}</div>
-    <div style="width: 100%; height: 8px; background-color: #fce7f3; border-radius: 999px; overflow: hidden; margin-bottom: 6px;">
-        <div style="width: {progress_percent}%; height: 100%; background-color: #f472b6; border-radius: 999px;"></div>
-    </div>
-    <div style="font-size: 11px; color: #6b7280;">{progress_step} / 7</div>
-</div>
-    """,
-    unsafe_allow_html=True
-)
+# st.markdown(
+#     f"""
+# <div style="position: fixed; top: 120px; left: calc(50% + 390px); z-index: 9999; background-color: #ffffff; border: 1.5px solid #f472b6; border-radius: 18px; padding: 12px 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14); font-size: 13px; color: #374151; font-weight: bold; width: 150px;">
+#     <div style="margin-bottom: 6px;">入力状況</div>
+#     <div style="font-size: 12px; margin-bottom: 8px;">{progress_label}</div>
+#     <div style="width: 100%; height: 8px; background-color: #fce7f3; border-radius: 999px; overflow: hidden; margin-bottom: 6px;">
+#         <div style="width: {progress_percent}%; height: 100%; background-color: #f472b6; border-radius: 999px;"></div>
+#     </div>
+#     <div style="font-size: 11px; color: #6b7280;">{progress_step} / 7</div>
+# </div>
+#     """,
+#     unsafe_allow_html=True
+# )
 
 # ------------------------------
 # はじめに：入力の全体の流れ
@@ -367,13 +340,36 @@ with st.container(border=True):
         """
         このアプリは、支援場面の状況を上から順番に記録していくアプリです。
 
-        まず、基本情報を選び、現在の状態、困りごと、対応内容、
-        不安や負担感を入力します。
+        まず、基本情報を選び、現在の状態と困りごとを整理します。
 
-        最後にAIヒントを確認し、入力内容を保存します。
+        その後、AIからのヒントや過去の成功ログを参考にしながら、
+        今回の対応内容を考えます。
+
+        最後に、不安や負担感、対応結果を入力し、記録を保存します。
 
         詳しい入力内容は、各Stepの「ここで入力すること」を確認してください。
         """
+    )
+
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #bbf7d0;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 12px 0 16px 0;
+            background-color: #f0fdf4;
+            color: #374151;
+        ">
+            <b>このアプリで目指していること</b><br>
+            記録を残していくことで、次回同じような場面になったときに、
+            過去にうまくいった対応を参考にしやすくなります。<br><br>
+
+            AIのヒントと過去の成功ログを組み合わせることで、
+            一人ひとりに合った支援を考えやすくすることを目指しています。
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
     st.markdown(
@@ -390,9 +386,9 @@ with st.container(border=True):
             Step1：基本情報<br>
             Step2：現在の状態<br>
             Step3：AI支援ナビ<br>
-            Step4：対応内容の記録<br>
-            Step5：不安・負担感・対応結果<br>
-            Step6：AIからの対応ヒント<br>
+            Step4：AIからの対応ヒント<br>
+            Step5：対応内容の記録<br>
+            Step6：不安・負担感・対応結果<br>
             Step7：入力内容を保存
         </div>
         """,
@@ -501,71 +497,93 @@ with st.container(border=True,key="step2_card"):
         ["安定", "少し不安", "しんどい", "パニック"]
     )
 
+        # ------------------------------
+    # Step2で「パニック」が選ばれた場合だけ、
+    # 緊急時の安全確認ボタンを表示する
+    # ------------------------------
+    if status == "パニック":
+
+        st.warning(
+            "⚠️ パニックに近い状態が選ばれています。\n\n"
+            "まずは本人と周囲の安全を確認してください。"
+        )
+
+        if st.button("🚨 緊急時の確認を表示する", use_container_width=True):
+
+            st.info(
+                "緊急時の確認\n\n"
+                "・けが、急な体調悪化、火災などで救急車・消防車が必要な場合：119\n\n"
+                "・事件、事故、暴力など緊急の危険がある場合：110\n\n"
+                "・緊急ではないが警察に相談したい場合：#9110\n\n"
+                "・一人で対応し続けるのが難しい場合：所属先の責任者、家族、支援機関に共有\n\n"
+                "※この表示は医療的判断や専門的診断ではありません。"
+            )
+
 
 #ログありの人だけ過去ログを表示する
-if st.session_state["condition"] == "ログあり":
-    with st.expander("参考：過去の対応ログ",expanded=False):
+# if st.session_state["condition"] == "ログあり":
+#     with st.expander("参考：過去の対応ログ",expanded=False):
 
-        #条件の明示（研究的に重要）
-        # st.caption("※あなたは「ログあり」条件です")
-        st.info(
-            f"過去ログは、以前の似た場面で参考になった対応を見返すための情報です。\n\n"
-            f"今は「{status}」に近い状態で、以前うまくいった対応例を表示しています。\n\n"
-            "まったく同じ対応をする必要はありません。今回の状況に合わせて、参考にしてください。"
-        )
+#         #条件の明示（研究的に重要）
+#         # st.caption("※あなたは「ログあり」条件です")
+#         st.info(
+#             f"過去ログは、以前の似た場面で参考になった対応を見返すための情報です。\n\n"
+#             f"今は「{status}」に近い状態で、以前うまくいった対応例を表示しています。\n\n"
+#             "まったく同じ対応をする必要はありません。今回の状況に合わせて、参考にしてください。"
+#         )
         
 
-        #supporter_logを読み込む
-        past_log = conn.read(worksheet = "supporter_log",ttl=0)
-        past_log = pd.DataFrame(past_log)
+#         #supporter_logを読み込む
+#         past_log = conn.read(worksheet = "supporter_log",ttl=0)
+#         past_log = pd.DataFrame(past_log)
 
      
-        #participant_id列を文字にそろえて空白を消す
-        past_log["participant_id"] = past_log["participant_id"].astype(str).str.strip()
+#         #participant_id列を文字にそろえて空白を消す
+#         past_log["participant_id"] = past_log["participant_id"].astype(str).str.strip()
 
-        #seen_status列を文字にそろえて空白を消す
-        past_log["seen_status"] = past_log["seen_status"].astype(str).str.strip()
+#         #seen_status列を文字にそろえて空白を消す
+#         past_log["seen_status"] = past_log["seen_status"].astype(str).str.strip()
 
-        # is_success列を文字にそろえて空白を消す
-        past_log["is_success"] = past_log["is_success"].astype(str).str.strip()
+#         # is_success列を文字にそろえて空白を消す
+#         past_log["is_success"] = past_log["is_success"].astype(str).str.strip()
 
-        #自分のログだけに絞る
-        past_log = past_log[past_log["participant_id"] == st.session_state["participant_id"]]
+#         #自分のログだけに絞る
+#         past_log = past_log[past_log["participant_id"] == st.session_state["participant_id"]]
     
 
-        #今選んでいる状態と同じログだけに絞る
-        past_log = past_log[past_log["seen_status"] == status]
+#         #今選んでいる状態と同じログだけに絞る
+#         past_log = past_log[past_log["seen_status"] == status]
         
-        #参考にできるログだけに絞る
-        #「うまくいったと思う」「少しうまくいったと思う」を成功寄りのログとして扱う
-        success_values = [
-            "うまくいったと思う",
-            "少しうまくいったと思う"
-        ]
+#         #参考にできるログだけに絞る
+#         #「うまくいったと思う」「少しうまくいったと思う」を成功寄りのログとして扱う
+#         success_values = [
+#             "うまくいったと思う",
+#             "少しうまくいったと思う"
+#         ]
 
-        past_log = past_log[past_log["is_success"].isin(success_values)]
+#         past_log = past_log[past_log["is_success"].isin(success_values)]
         
 
-        #成功したログの件数を表示
-        st.write(f"参考にできる対応例が {len(past_log)} 件あります")
+#         #成功したログの件数を表示
+#         st.write(f"参考にできる対応例が {len(past_log)} 件あります")
 
-        #新しい順に並べる（最新が上）
-        past_log = past_log.sort_values("created_at",ascending=False)
+#         #新しい順に並べる（最新が上）
+#         past_log = past_log.sort_values("created_at",ascending=False)
 
-        if past_log.empty:
-            # 同じ状態のログが1件もないとき
-            st.info("参考にできる過去の対応例は、まだありません\n\n(ここは、保存していただくと次回より表示されるようになります)")
-            st.write("表示された状況を見て、どう対応するかを入力してください")
-            #最小限の支援（ログがないときだけ）
-            st.write("ヒント:まずは落ち着いて,様子を確認しましょう")
-        else:
-            #上から5件だけ表示（協力者に読みやすい形で表示する
-            for _, row in past_log.head(5).iterrows():
-                st.markdown("---")
-                st.write("日時：", row["created_at"])
-                st.write("状態：", row["seen_status"])
-                st.write("対応例：", row["action"])
-                st.write("その時の負担感：", row["mental_load"])
+#         if past_log.empty:
+#             # 同じ状態のログが1件もないとき
+#             st.info("参考にできる過去の対応例は、まだありません\n\n(ここは、保存していただくと次回より表示されるようになります)")
+#             st.write("表示された状況を見て、どう対応するかを入力してください")
+#             #最小限の支援（ログがないときだけ）
+#             st.write("ヒント:まずは落ち着いて,様子を確認しましょう")
+#         else:
+#             #上から5件だけ表示（協力者に読みやすい形で表示する
+#             for _, row in past_log.head(5).iterrows():
+#                 st.markdown("---")
+#                 st.write("日時：", row["created_at"])
+#                 st.write("状態：", row["seen_status"])
+#                 st.write("対応例：", row["action"])
+#                 st.write("その時の負担感：", row["mental_load"])
                 
 
 
@@ -585,7 +603,11 @@ if st.session_state["condition"] == "ログあり":
 with st.container(border=True, key="step3_card"):
 
     st.markdown("### 🤖 Step3：AI支援ナビ")
-    st.caption("今の困りごとを整理し、対応のヒントを選びやすくするためのステップです。")
+    st.caption(
+        "AIが答えを決めるのではなく、"
+        "AIの提案と過去の成功ログを参考にしながら、"
+        "支援者が次の対応を考えるためのステップです。"               
+    )
 
     st.markdown(
         """
@@ -597,9 +619,13 @@ with st.container(border=True, key="step3_card"):
             background-color: #f0f9ff;
             color: #374151;
         ">
-            <b>ここで入力すること</b><br>
-            今の困りごとをカテゴリに分けて、対応を考えやすくします。
-            AIに答えを任せるのではなく、支援者が次の対応を考えるための手がかりを整理します。
+            <b>ここで行うこと</b><br>
+            ①今の困りごとを選びます。<br>
+            ②AIからのヒントを確認します。<br>
+            ③過去の成功ログも参考にしながら、今回の対応を考えます。<br><br>
+           
+            AIは答えを決めるものではありません。
+            支援者が自分で判断するための手がかりを整理します。
         </div>
         """,
         unsafe_allow_html=True
@@ -669,7 +695,7 @@ if support_category != "選択してください" and SHOW_BASIC_ADVICE:
                 {support_category}
             </div>
             <div style="font-size: 14px; color: #374151; margin-top: 6px;">
-                この内容に合わせて、対応例とAI対応例のヒントを表示します。
+                この内容に合わせて、対応例とAIのヒントを表示します。
             </div>
         </div>
         """,
@@ -762,183 +788,43 @@ if support_category != "選択してください" and SHOW_BASIC_ADVICE:
                 "「何が起きたか」「自分が困ったこと」「次に相談したいこと」を簡単に記録しておくと、後で共有しやすくなります。"
                 )
     
-
-# ------------------------------
-# Step4：対応内容の記録
-# 実際の対応、または自分ならどう対応するかを書くカード
-# ------------------------------
-with st.container(border=True, key="step4_card"):
-
-    st.markdown("### 📝 Step4：対応内容の記録")
-    st.caption("AI支援ナビや対応のヒントを参考にして、この場面での対応内容を記録してください。")
-
-    st.markdown(
-        """
-        <div style="
-            border: 1px solid #fed7aa;
-            border-radius: 14px;
-            padding: 12px 14px;
-            margin: 10px 0 16px 0;
-            background-color: #fff7ed;
-            color: #374151;
-        ">
-            <b>ここで入力すること</b><br>
-            実際に行った対応、または自分ならどう対応するかを短く書きます。
-            完璧な文章でなくても大丈夫です。
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # 支援者自身が疲れている場合は、対応内容を無理に書かせない
-    if support_category == "支援者自身が疲れている":
-        action_label = "[任意]今の自分にできそうなこと、または記録しておきたいことを書いてください（空欄でも大丈夫です）"
-    else:
-        action_label = "[必須]この場面で、どのように対応しますか？"
-
-    action = st.text_area(
-        action_label,
-        key="action_text"
-    )
-
-    memo = st.text_area(
-        "[任意]補足メモがあれば入力してください（空欄でも大丈夫です）",
-        height=100
-    )
-
-# ------------------------------
-# Step5：不安・負担感・対応結果
-# 評価項目を入力するカード
-# ------------------------------
-with st.container(border=True, key="step5_card"):
-
-    st.markdown("### 📊 Step5：不安・負担感・対応結果")
-    st.caption("この場面で感じた不安や負担、対応結果について選んでください。")
-
-    st.markdown(
-        """
-        <div style="
-            border: 1px solid #d8b4fe;
-            border-radius: 14px;
-            padding: 12px 14px;
-            margin: 10px 0 16px 0;
-            background-color: #faf5ff;
-            color: #374151;
-        ">
-            <b>ここで入力すること</b><br>
-            この場面で感じた不安、迷い、相談の必要性、負担感、対応結果を選びます。
-            直感的に近いものを選んでください。
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    anxiety = st.radio(
-        "[必須]この場面で、対応を考えるときの不安はどのくらいですか？",
-        [
-            "0:ぜんぜん大丈夫（見通しばっちり）",
-            "1:ちょっとドキドキする",
-            "2:まあまあ不安",
-            "3:かなり不安",
-            "4:パニックになりそう！"
-        ]
-    )
-
-    hesitation = st.radio(
-        "この場面で対応に迷いはありましたか？",
-        ["はい", "いいえ"]
-    )
-
-    consult_need = st.radio(
-        "この場面について、誰かに相談したいと思いますか？",
-        ["はい", "いいえ"]
-    )
-
-    if consult_need == "はい":
-        consult_who = st.radio(
-            "[任意]相談するとしたら、誰に相談しますか？",
-            ["家族", "支援員", "教員", "その他"]
-        )
-    else:
-        consult_who = ""
-
-    urgency = st.radio(
-        "この場面では、どれくらい急いで対応・相談する必要がありますか？",
-        [
-            "低い（様子を見てもよい）",
-            "中くらい（今日中には対応したい）",
-            "高い（すぐに対応・相談したい）"
-        ]
-    )
-
-    mental_load = st.radio(
-        "[必須]この場面で感じた心理的な負担はどのくらいありましたか？",
-        [
-            "1:ほとんど負担はない",
-            "2:少し負担がある",
-            "3:ある程度負担がある",
-            "4:かなり負担がある",
-            "5:非常に負担が大きい"
-        ]
-    )
-
-    is_success = st.radio(
-        "[必須]この場面での対応について、あなた自身はどのように感じましたか？",
-        [
-            "うまくいったと思う",
-            "少しうまくいったと思う",
-            "どちらともいえない",
-            "あまりうまくいかなかったと思う",
-            "うまくいかなかったと思う"
-        ]
-    )
-
-# 入力された内容を確認表示
-# st.write("入力された対応内容：", action)
-
 #AI支援ナビ：AIに渡す文章を作る関数
 
 def build_ai_prompt(ai_input_data):
-    # AI対応例を作成するためのプロンプト文を作る関数です
-    # まだAIに接続しません
+    """
+    AIからのヒントを作成するためのプロンプト文を作る関数です。
+    AIには、対応前に分かっている最低限の情報だけを渡します。
+    """
 
-    place = ai_input_data.get("place","未入力")
-    supporter_role = ai_input_data.get("supporter_role","未入力")
-    current_state = ai_input_data.get("current_state","未入力")
-    support_category = ai_input_data.get("support_category","未入力")
-    anxiety_level = ai_input_data.get("anxiety_level","未入力")
-    wants_consultation = ai_input_data.get("wants_consultation","未入力")
-    consultation_target = ai_input_data.get("consultation_target","未入力")
-    urgency_level = ai_input_data.get("urgency_level","未入力")
-    mental_load = ai_input_data.get("mental_load","未入力")
+    # AIに渡す情報を取り出す
+    place = ai_input_data.get("place", "未入力")
+    supporter_role = ai_input_data.get("supporter_role", "未入力")
+    current_state = ai_input_data.get("current_state", "未入力")
+    support_category = ai_input_data.get("support_category", "未入力")
 
     ai_prompt = f"""
 あなたは、支援者の意思決定を補助するAIです。
 
-以下の情報をもとに、支援者が次に取りやすい対応例を作成してください。
+以下の情報をもとに、支援者が次の対応を考えるためのヒントを作成してください。
 
 [入力情報]
 ・場所 : {place}
 ・支援者の立場 : {supporter_role}
 ・現在の状態 : {current_state}
 ・困りごとのカテゴリ : {support_category}
-・不安度 : {anxiety_level}
-・相談希望 : {wants_consultation}
-・相談先 : {consultation_target}
-・緊急度 : {urgency_level}
-・心理的負担 : {mental_load}
 
-[出力して欲しい内容]
+[出力してほしい内容]
 1. まず最初に確認すること
-2. 支援者がすぐに取れる対応例
+2. 支援者がすぐに取れる対応のヒント
 3. 無理をしないための注意点
-4. 必要に応じて相談する相手
+4. 必要に応じて相談する相手や確認先
 
 [注意]
-・医療的判断や専門的診断を行わないでください。
+・医療的判断や専門的診断は行わないでください。
 ・断定的な言い方は避けてください。
 ・支援者の心理的負担を増やさない、やさしい表現にしてください。
-・具体的で短く、実行しやすい対応例にしてください。
+・具体的で短く、実行しやすいヒントにしてください。
+・AIが答えを決めるのではなく、支援者が判断するための手がかりとして書いてください。
 """
     return ai_prompt
 
@@ -1109,12 +995,12 @@ def generate_ai_advice(ai_input_data):
         return get_basic_advice(ai_input_data)
 
 # ------------------------------
-# Step6：AIからの対応ヒント
+# Step4：AIからの対応ヒント
 # 入力内容をもとにAI対応例を表示するカード
 # ------------------------------
 with st.container(border=True, key="step6_card"):
 
-    st.markdown("### 🤖 Step6：AIからの対応ヒント")
+    st.markdown("### 🤖 Step4：AIからの対応ヒント")
     st.caption("入力内容をもとに、次の対応を考えるヒントを確認します。")
 
     st.markdown(
@@ -1136,19 +1022,14 @@ with st.container(border=True, key="step6_card"):
         unsafe_allow_html=True
     )
 
-    ai_consult_target = consult_who if consult_need == "はい" else "なし"
+    # ai_consult_target = consult_who if consult_need == "はい" else "なし"
 
     # AIに渡す情報を1つの箱にまとめる
     ai_input_data = {
-        "place": location,
-        "supporter_role": supporter,
-        "current_state": status,
-        "support_category": support_category,
-        "anxiety_level": anxiety,
-        "wants_consultation": consult_need,
-        "consultation_target": ai_consult_target,
-        "urgency_level": urgency,
-        "mental_load": mental_load,
+    "place": location,
+    "supporter_role": supporter,
+    "current_state": status,
+    "support_category": support_category,
     }
 
     # まとめた情報をもとに、AIへ渡す文章を作る
@@ -1164,23 +1045,20 @@ with st.container(border=True, key="step6_card"):
             st.markdown("#### 入力データ")
 
             st.info(
-                f"場所 : {location}\n\n"
-                f"支援者の立場 : {supporter}\n\n"
-                f"現在の状態 : {status}\n\n"
-                f"困りごとのカテゴリ : {support_category}\n\n"
-                f"不安度 : {anxiety}\n\n"
-                f"相談希望 : {consult_need}\n\n"
-                f"相談先 : {ai_consult_target}\n\n"
-                f"緊急度 : {urgency}\n\n"
-                f"心理的負担 : {mental_load}\n\n"
+            f"場所 : {location}\n\n"
+            f"支援者の立場 : {supporter}\n\n"
+            f"現在の状態 : {status}\n\n"
+            f"困りごとのカテゴリ : {support_category}\n\n"
             )
+
+
 
             st.markdown("#### AIに渡すプロンプト")
             st.text(ai_prompt)
 
     if support_category != "選択してください":
 
-        if st.button("🤖 AI対応例を作成する", use_container_width=True):
+        if st.button("🤖 AIからのヒントを受け取る", use_container_width=True):
             st.session_state["ai_advice_requested"] = True
 
             # AI対応例がまだ作成されていない場合だけ作成する
@@ -1200,7 +1078,7 @@ with st.container(border=True, key="step6_card"):
                     background-color: #f0fdf4;
                     color: #374151;
                 ">
-                    <b>🤖 AI対応例</b><br>
+                    <b>🤖 AIからのヒント</b><br>
                     この対応例は、支援者が次の行動を考えるためのヒントです。
                     医療的判断や診断ではありません。
                 </div>
@@ -1210,13 +1088,213 @@ with st.container(border=True, key="step6_card"):
 
             st.markdown(st.session_state["ai_advice_text"])
 
+            # ------------------------------
+            # AI対応例のあとに、過去の成功ログを表示する
+            # AIの提案を判断するための参考材料として使う
+            # ------------------------------
+            if st.session_state["condition"] == "ログあり":
+
+                with st.expander("過去の成功ログを参考にする", expanded=False):
+
+                    st.info(
+                        "ここでは、今の状況に近い過去の成功ログを表示します。\n\n"
+                        "AIからのヒントだけで判断するのではなく、"
+                        "過去にうまくいった対応も参考にしながら、今回の対応を考えてください。\n\n"
+                        "記録が増えるほど、一人ひとりに合った支援のヒントが増えていきます。"
+                    )
+
+                    past_log = conn.read(worksheet="supporter_log", ttl=0)
+                    past_log = pd.DataFrame(past_log)
+
+                    past_log["participant_id"] = past_log["participant_id"].astype(str).str.strip()
+                    past_log["seen_status"] = past_log["seen_status"].astype(str).str.strip()
+                    past_log["support_category"] = past_log["support_category"].astype(str).str.strip()
+                    past_log["is_success"] = past_log["is_success"].astype(str).str.strip()
+
+                    past_log = past_log[past_log["participant_id"] == st.session_state["participant_id"]]
+                    past_log = past_log[past_log["seen_status"] == status]
+                    past_log = past_log[past_log["support_category"] == support_category]
+
+                    success_values = [
+                        "うまくいったと思う",
+                        "少しうまくいったと思う"
+                    ]
+
+                    past_log = past_log[past_log["is_success"].isin(success_values)]
+                    past_log = past_log.sort_values("created_at", ascending=False)
+
+                    if past_log.empty:
+                        st.info(
+                            "今の状況に近い成功ログは、まだありません。\n\n"
+                            "今回の記録を保存すると、次回以降の参考ログとして活用できます。"
+                        )
+                    else:
+                        st.write(f"参考にできる成功ログが {len(past_log)} 件あります。最大3件まで表示します。")
+
+                        for _, row in past_log.head(3).iterrows():
+                            st.markdown("---")
+                            st.write("日時：", row["created_at"])
+                            st.write("状態：", row["seen_status"])
+                            st.write("困りごと：", row["support_category"])
+                            st.write("対応例：", row["action"])
+                            st.write("その時の負担感：", row["mental_load"])
+
             if st.session_state["ai_advice_source"] == "basic_fallback":
                 st.caption("※OpenAI APIが利用できない場合は、基本の対応例を表示しています。")
 
     else:
-        st.warning("AI対応例を表示するには、先にStep3で困りごとのカテゴリを選んでください。")
+        st.warning("AIからのヒントを表示するには、先にStep3で困りごとのカテゴリを選んでください。")
 
 # --- ここまで ---
+# ------------------------------
+# Step5：対応内容の記録
+# 実際の対応、または自分ならどう対応するかを書くカード
+# ------------------------------
+with st.container(border=True, key="step4_card"):
+
+    st.markdown("### 📝 Step5：対応内容の記録")
+    st.caption("AI支援ナビや対応のヒントを参考にして、この場面での対応内容を記録してください。")
+
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #fed7aa;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 10px 0 16px 0;
+            background-color: #fff7ed;
+            color: #374151;
+        ">
+            <b>ここで入力すること</b><br>
+            実際に行った対応、または自分ならどう対応するかを短く書きます。
+            完璧な文章でなくても大丈夫です。
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # 支援者自身が疲れている場合は、対応内容を無理に書かせない
+    if support_category == "支援者自身が疲れている":
+        action_label = "[任意]今の自分にできそうなこと、または記録しておきたいことを書いてください（空欄でも大丈夫です）"
+    else:
+        action_label = "[必須]この場面で、どのように対応しますか？"
+
+    action = st.text_area(
+        action_label,
+        key="action_text"
+    )
+
+    memo = st.text_area(
+        "[任意]補足メモがあれば入力してください（空欄でも大丈夫です）",
+        height=100
+    )
+
+    # ------------------------------
+# Step6：不安・負担感・対応結果
+# 評価項目を入力するカード
+# ------------------------------
+with st.container(border=True, key="step5_card"):
+
+    st.markdown("### 📊 Step6：振り返り")
+    st.caption("AIヒントや過去ログを参考にして対応を考えたあと、不安や負担感、対応結果を振り返ってみてください。")
+
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #d8b4fe;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 10px 0 16px 0;
+            background-color: #faf5ff;
+            color: #374151;
+        ">
+            <b>ここで入力すること</b><br>
+            この場面で感じた不安、迷い、相談の必要性、負担感、対応結果を選びます。
+            直感的に近いものを選んでください。
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    anxiety = st.radio(
+        "[必須]AIヒントや過去ログを確認したあと、対応を考える不安はどのくらいありましたか？",
+        [
+            "0:ぜんぜん大丈夫（見通しばっちり）",
+            "1:ちょっとドキドキする",
+            "2:まあまあ不安",
+            "3:かなり不安",
+            "4:パニックになりそう！"
+        ]
+    )
+
+    hesitation = st.radio(
+        "この場面で対応に迷いはありましたか？",
+        ["はい", "いいえ"]
+    )
+
+    consult_need = st.radio(
+        "[任意]相談するとしたら、誰に相談したいと思いましたか？",
+        ["はい", "いいえ"]
+    )
+
+    if consult_need == "はい":
+        consult_who = st.radio(
+            "[任意]相談するとしたら、誰に相談しますか？",
+            ["選択してください","家族", "支援員", "教員", "その他"]
+        )
+    else:
+        consult_who = ""
+
+    urgency = st.radio(
+        "この場面では、どれくらい急いで対応・相談する必要があると感じましたか？",
+        [
+            "低い（様子を見てもよい）",
+            "中くらい（今日中には対応したい）",
+            "高い（すぐに対応・相談したい）"
+        ]
+    )
+
+        # ------------------------------
+    # 緊急度が高い場合だけ、安全確認カードを表示する
+    # AIではなく、固定ルールとして表示する
+    # ------------------------------
+    if urgency.startswith("高い"):
+
+        st.warning(
+            "⚠️ 緊急度が高いと入力されています。\n\n"
+            "本人や周囲に危険がある場合は、このアプリやAIの回答を待たず、"
+            "所属先のルールや責任者への共有を優先してください。"
+        )
+
+        st.info(
+            "安全確認の参考\n\n"
+            "・けが、急な体調悪化、火災などで救急車・消防車が必要な場合：119\n\n"
+            "・事件、事故、暴力など緊急の危険がある場合：110\n\n"
+            "・緊急ではない相談の場合：所属先の責任者、家族、支援機関、相談窓口に共有\n\n"
+            "※この表示は医療的判断や専門的診断ではありません。"
+        )
+
+    mental_load = st.radio(
+        "[必須]この場面で感じた心理的な負担はどのくらいありましたか？",
+        [
+            "1:ほとんど負担はない",
+            "2:少し負担がある",
+            "3:ある程度負担がある",
+            "4:かなり負担がある",
+            "5:非常に負担が大きい"
+        ]
+    )
+
+    is_success = st.radio(
+        "[必須]この場面での対応について、あなた自身はどのように感じましたか？",
+        [
+            "うまくいったと思う",
+            "少しうまくいったと思う",
+            "どちらともいえない",
+            "あまりうまくいかなかったと思う",
+            "うまくいかなかったと思う"
+        ]
+    )
 
 # --- ここから 保存ボタン（まだSheetsには保存しない） ---
 
@@ -1248,7 +1326,13 @@ with st.container(border=True, key="step7_card"):
     )
 
     if st.session_state["record_saved"]:
-        st.success("保存しました。ご協力ありがとうございました")
+        st.success(
+             "✅ 保存しました。\n\n"
+             "今回の記録は、次回以降の支援を考えるための参考記録として蓄積されます。\n\n"
+             "記録が増えるほど、一人ひとりに合った支援のヒントが充実していきます。\n\n"
+             "ご協力ありがとうございました。\n\n"
+             "この画面は、閉じていただいて大丈夫です\n\n"           
+        )
 
     else:
         if st.button("💾 保存する", use_container_width=True):
