@@ -761,6 +761,7 @@ if support_category != "選択してください" and SHOW_BASIC_ADVICE:
         self_care_choice = st.radio(
             "今の自分に近いものを選んでください",
             [
+                "選択してください",
                 "少し休む・距離を取る",
                 "誰かに共有する",
                 "あとで相談できるように記録する",
