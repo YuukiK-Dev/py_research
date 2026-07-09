@@ -89,7 +89,7 @@ st.markdown(
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 import time
-SHOW_AI_DEBUG = True
+SHOW_AI_DEBUG = False
 
 # 基本の対応例を画面に表示するかどうかを切り替える設定
 # True : API未接続・開発中は表示する
@@ -155,6 +155,23 @@ if not st.session_state["is_logged_in"]:
     st.title("AI支援ナビ")
     st.subheader("個別最適化支援アプリ")
 
+    st.markdown(
+        """
+        <div style="
+            border: 1px solid #fbcfe8;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin: 14px 0 18px 0;
+            background-color: #fff7fb;
+            color: #374151;
+        ">
+            このアプリは、支援者が困った場面で、次の対応を考えやすくするための支援アプリです。<br><br>
+            配付されたIDとパスワードを入力して、ログインしてください。
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 # ------------------------------
 # Google Sheets に接続する
 # ここで、スプレッドシートを読み書きできるようにする
@@ -170,7 +187,7 @@ if not st.session_state["is_logged_in"]:
     try:
         if "users_df" not in st.session_state:
             with st.spinner("読み込み中です。しばらくお待ちください"):
-                st.session_state["users_df"] = conn.read(worksheet="users", ttl=0)
+                st.session_state["users_df"] = conn.read(worksheet="users", ttl=600)
 
         users_df = st.session_state["users_df"]
             
@@ -179,6 +196,7 @@ if not st.session_state["is_logged_in"]:
         st.error("Google Sheets の読み込みに失敗しました")
         st.error("secrets.toml や シート名 users を確認してください")
         st.stop()
+
 
 # ------------------------------
 # 入力欄を表示する
@@ -212,6 +230,9 @@ if not st.session_state["is_logged_in"]:
         if input_id == "" or input_pass == "":
             st.error("配付されたIDと配付されたパスワードの両方を入力してください")
             st.stop()
+
+        
+
             
 
         # ------------------------------
