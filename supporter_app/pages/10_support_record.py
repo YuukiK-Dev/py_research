@@ -487,13 +487,15 @@ with st.container(border=True,key="step1_card"):
 
 
 # ------------------------------
-# Step2：現在の状態
-# 子供や利用者さんの状態を選ぶカード
+# Step2：支援を受ける方の現在の状態
+# 支援を受ける方の状態を選ぶカード
 # ------------------------------
-with st.container(border=True,key="step2_card"):
+with st.container(border=True, key="step2_card"):
 
-    st.markdown("### 🌼 Step2：現在の状態")
-    st.caption("今、子供や利用者さんがどのような状態かを選んでください。")
+    st.markdown("### 🌼 Step2：支援を受ける方の現在の状態")
+    st.caption(
+        "今、支援を受ける方がどのような状態かを選んでください。"
+    )
 
     st.markdown(
         """
@@ -506,7 +508,7 @@ with st.container(border=True,key="step2_card"):
             color: #374151;
         ">
             <b>ここで入力すること</b><br>
-            今の様子に一番近い状態を1つ選びます。
+            支援を受ける方の今の様子に一番近い状態を1つ選びます。
             迷う場合は、完全に一致していなくても近いものを選んでください。
         </div>
         """,
@@ -514,8 +516,8 @@ with st.container(border=True,key="step2_card"):
     )
 
     status = st.radio(
-        "🌱 子供や利用者さんの今の状態を選んでください",
-        ["安定", "少し不安", "しんどい", "パニック"]
+    "🌱 支援を受ける方の今の状態を選んでください",
+    ["安定", "少し不安", "しんどい", "パニック"]
     )
 
         # ------------------------------
@@ -655,7 +657,7 @@ with st.container(border=True, key="step3_card"):
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("💬 声かけに迷う", use_container_width=True):
+        if st.button("💬 支援を受ける方の声かけに迷う", use_container_width=True):
             st.session_state["support_category"] = "声かけに迷う"
             st.session_state["ai_advice_requested"] = False
             st.session_state["ai_advice_text"] = ""
@@ -663,7 +665,7 @@ with st.container(border=True, key="step3_card"):
             st.session_state["ai_error_message"] = ""
 
     with col2:
-        if st.button("🌊 感情が高ぶっている", use_container_width=True):
+        if st.button("🌊 支援を受ける方の感情が高ぶっている", use_container_width=True):
             st.session_state["support_category"] = "感情が高ぶっている"
             st.session_state["ai_advice_requested"] = False
             st.session_state["ai_advice_text"] = ""
@@ -673,7 +675,7 @@ with st.container(border=True, key="step3_card"):
     col3, col4 = st.columns(2)
 
     with col3:
-        if st.button("📅 予定変更で混乱している", use_container_width=True):
+        if st.button("📅 支援を受ける方が予定変更で混乱している", use_container_width=True):
             st.session_state["support_category"] = "予定変更で混乱している"
             st.session_state["ai_advice_requested"] = False
             st.session_state["ai_advice_text"] = ""
@@ -681,14 +683,14 @@ with st.container(border=True, key="step3_card"):
             st.session_state["ai_error_message"] = ""
 
     with col4:
-        if st.button("🏠 外出を嫌がっている", use_container_width=True):
+        if st.button("🏠 支援を受ける方が外出を嫌がっている", use_container_width=True):
             st.session_state["support_category"] = "外出を嫌がっている"
             st.session_state["ai_advice_requested"] = False
             st.session_state["ai_advice_text"] = ""
             st.session_state["ai_advice_source"] = ""
             st.session_state["ai_error_message"] = ""
 
-    if st.button("🫧 支援者自身が疲れている", use_container_width=True):
+    if st.button("🫧 支援している自分がが疲れている", use_container_width=True):
         st.session_state["support_category"] = "支援者自身が疲れている"
         st.session_state["ai_advice_requested"] = False
         st.session_state["ai_advice_text"] = ""
