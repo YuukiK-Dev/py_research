@@ -492,55 +492,63 @@ with st.container(border=True,key="step1_card"):
 # ------------------------------
 with st.container(border=True, key="step2_card"):
 
-    st.markdown("### 🌼 Step2：支援を受ける方の現在の状態")
-    st.caption(
-        "今、支援を受ける方がどのような状態かを選んでください。"
-    )
-
-    st.markdown(
-        """
-        <div style="
-            border: 1px solid #fde68a;
-            border-radius: 14px;
-            padding: 12px 14px;
-            margin: 10px 0 16px 0;
-            background-color: #fffbeb;
-            color: #374151;
-        ">
-            <b>ここで入力すること</b><br>
-            支援を受ける方の今の様子に一番近い状態を1つ選びます。
-            迷う場合は、完全に一致していなくても近いものを選んでください。
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    status = st.radio(
-    "🌱 支援を受ける方の今の状態を選んでください",
-    ["安定", "少し不安", "しんどい", "パニック"]
-    )
-
-        # ------------------------------
-    # Step2で「パニック」が選ばれた場合だけ、
-    # 緊急時の安全確認ボタンを表示する
-    # ------------------------------
-    if status == "パニック":
-
-        st.warning(
-            "⚠️ パニックに近い状態が選ばれています。\n\n"
-            "まずは本人と周囲の安全を確認してください。"
+        st.markdown("### 🌼 Step2：支援場面の時期と、支援を受ける方の状態")
+        st.caption(
+            "この場面がいつ頃の出来事かと、そのときの状態を選んでください。"
         )
 
-        if st.button("🚨 緊急時の確認を表示する", use_container_width=True):
+       
+        event_timing = st.radio(
+            "[必須]支援場面は、いつ頃の出来事ですか？",
+            [
+                "選択してください",
+                "現在（今、起こっている）",
+                "今日（今より前）",
+                "昨日",
+                "2日～7日前",
+                "8日以上前",
+                "覚えていない"
+            ]
+        )
 
-            st.info(
-                "緊急時の確認\n\n"
-                "・けが、急な体調悪化、火災などで救急車・消防車が必要な場合：119\n\n"
-                "・事件、事故、暴力など緊急の危険がある場合：110\n\n"
-                "・緊急ではないが警察に相談したい場合：#9110\n\n"
-                "・一人で対応し続けるのが難しい場合：所属先の責任者、家族、支援機関に共有\n\n"
-                "※この表示は医療的判断や専門的診断ではありません。"
+        st.caption(
+            "あとで相談相手に状況を伝えるときや、"
+            "相談用の要約を作るときに役立ちます。"
+            "記入しなくても大丈夫です"
+        )
+
+        situation_detail = st.text_area(
+            "[任意]そのとき、何が起きていましたか？（一言でも大丈夫です）",
+            placeholder="例：予定が急に変わり、大きな声を出してしまいました",
+            height=80
+        )
+
+        status = st.radio(
+            "🌱 そのときの、支援を受ける方の状態を選んでください",
+            ["安定", "少し不安", "しんどい", "パニック"]
+        )
+
+        # ------------------------------
+        # Step2で「パニック」が選ばれた場合だけ、
+        # 緊急時の安全確認ボタンを表示する
+        # ------------------------------
+        if status == "パニック":
+
+            st.warning(
+                "⚠️ パニックに近い状態が選ばれています。\n\n"
+                "まずは本人と周囲の安全を確認してください。"
             )
+
+            if st.button("🚨 緊急時の確認を表示する", use_container_width=True):
+
+                st.info(
+                    "緊急時の確認\n\n"
+                    "・けが、急な体調悪化、火災などで救急車・消防車が必要な場合：119\n\n"
+                    "・事件、事故、暴力など緊急の危険がある場合：110\n\n"
+                    "・緊急ではないが警察に相談したい場合：#9110\n\n"
+                    "・一人で対応し続けるのが難しい場合：所属先の責任者、家族、支援機関に共有\n\n"
+                    "※この表示は医療的判断や専門的診断ではありません。"
+                )
 
 
 #ログありの人だけ過去ログを表示する
@@ -690,7 +698,7 @@ with st.container(border=True, key="step3_card"):
             st.session_state["ai_advice_source"] = ""
             st.session_state["ai_error_message"] = ""
 
-    if st.button("🫧 支援している自分がが疲れている", use_container_width=True):
+    if st.button("🫧 支援している自分が疲れている", use_container_width=True):
         st.session_state["support_category"] = "支援者自身が疲れている"
         st.session_state["ai_advice_requested"] = False
         st.session_state["ai_advice_text"] = ""
@@ -1208,12 +1216,7 @@ with st.container(border=True, key="step4_card"):
         key="action_text"
     )
 
-    memo = st.text_area(
-        "[任意]補足メモがあれば入力してください（空欄でも大丈夫です）",
-        height=100
-    )
-
-    # ------------------------------
+       # ------------------------------
 # Step6：不安・負担感・対応結果
 # 評価項目を入力するカード
 # ------------------------------
@@ -1257,17 +1260,31 @@ with st.container(border=True, key="step5_card"):
     )
 
     consult_need = st.radio(
-        "[任意]相談するとしたら、誰に相談したいと思いましたか？",
+        "この場面について、誰かに相談したいと思いましたか？",
         ["はい", "いいえ"]
     )
 
     if consult_need == "はい":
         consult_who = st.radio(
             "[任意]相談するとしたら、誰に相談しますか？",
-            ["選択してください","家族", "支援員", "教員", "その他"]
+            ["選択してください", "家族", "支援員", "教員", "その他"]
         )
+
+        st.caption(
+            "入力すると、相談したい内容をあとで整理したり、"
+            "相談用の要約を作ったりするときに役立ちます。"
+            "記入しなくても大丈夫です。"
+        )
+
+        consult_topic = st.text_area(
+            "[任意]どのようなことを相談したいですか？（一言でも大丈夫です）",
+            placeholder="例：予定変更を伝えるときの声かけについて相談したい",
+            height=80
+        )
+
     else:
         consult_who = ""
+        consult_topic = ""
 
     urgency = st.radio(
         "この場面では、どれくらい急いで対応・相談する必要があると感じましたか？",
@@ -1320,6 +1337,18 @@ with st.container(border=True, key="step5_card"):
         ]
     )
 
+    st.caption(
+        "入力すると、どのような対応が支援を受ける方に合っていたかを"
+        "あとで振り返ったり、相談用の要約を作ったりするときに役立ちます。"
+        "記入しなくても大丈夫です。"
+    )
+
+    person_response = st.text_area(
+        "[任意]対応したあと、支援を受ける方の様子はどう変わりましたか？（一言でも大丈夫です）",
+        placeholder="例：少し落ち着き、こちらの話を聞けるようになりました",
+        height=80
+    )
+
 # --- ここから 保存ボタン（まだSheetsには保存しない） ---
 
 # ------------------------------
@@ -1353,7 +1382,7 @@ with st.container(border=True, key="step7_card"):
         st.success(
              "✅ 保存しました。\n\n"
              "今回の記録は、次回以降の支援を考えるための参考記録として蓄積されます。\n\n"
-             "記録が増えるほど、一人ひとりに合った支援のヒントが充実していきます。\n\n"
+             "記録が増えるほど、過去にどうような対応があっていたのかを振り返りやすくなります。\n\n"
              "ご協力ありがとうございました。\n\n"
              "この画面は、閉じていただいて大丈夫です\n\n"           
         )
@@ -1370,7 +1399,11 @@ with st.container(border=True, key="step7_card"):
             if st.session_state["condition"] == "":
                 st.error("条件が取得できていません。もう一度ログインしてください")
                 st.stop()
-
+            
+            if event_timing == "選択してください":
+                st.error("支援場面がいつ頃の出来事かを選択してください")
+                st.stop()
+            
             if support_category == "選択してください":
                 st.error("困りごとのカテゴリを選択してください")
                 st.stop()
@@ -1409,12 +1442,16 @@ with st.container(border=True, key="step7_card"):
                 "participant_id": st.session_state["participant_id"],
                 "supporter": supporter,
                 "seen_status": status,
+                "event_timing": event_timing,
+                "situation_detail": situation_detail.strip(),
                 "support_category": support_category,
                 "ai_advice_text": st.session_state["ai_advice_text"],
                 "ai_advice_source": st.session_state["ai_advice_source"],
                 "ai_error_message": st.session_state["ai_error_message"],
                 "action": action,
-                "memo": memo,
+                "person_response": person_response.strip(),
+                "memo": "",
+                "consult_topic": consult_topic.strip(),
                 "location": location,
                 "anxiety": int(anxiety[0]),
                 "hesitation": hesitation,
