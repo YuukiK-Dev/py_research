@@ -595,6 +595,9 @@ if st.session_state["summary_requested"]:
                     st.rerun()
 
                 except Exception as e:
+                    #cloud logsで原因を確認するための、一時的にエラーを表示する
+                    print("相談用要約エラー:",repr(e))
+                    
                     # 詳しいエラー内容を開発者確認用に保存する
                     st.session_state[
                         "summary_error_message"
@@ -921,6 +924,13 @@ with st.container(border=True, key="step2_card"):
             "あとで相談相手に状況を伝えるときや、"
             "相談用の要約を作るときに役立ちます。"
             "記入しなくても大丈夫です"
+        )
+
+        st.info(
+            "⚠️ **個人情報の入力にご注意ください**\n\n"
+            "個人名や学校名・施設名など、個人が特定できる情報は"
+            "入力しないでください。\n\n"
+            "「本人」「学校」「施設」などに置き換えて入力してください。"
         )
 
         situation_detail = st.text_area(
@@ -1332,8 +1342,9 @@ def get_openai_advice(ai_input_data):
     ai_prompt = build_ai_prompt(ai_input_data)
 
     response = client.responses.create(
-        model="gpt-5.5",
+        model="gpt-5.5-2026-04-23",
         input=ai_prompt,
+        store=False,
     )
 
     ai_advice = response.output_text
