@@ -595,13 +595,6 @@ if st.session_state["summary_requested"]:
                     st.rerun()
 
                 except Exception as e:
-                    #cloud logsで原因を確認するための、一時的にエラーを表示する
-                    print(
-                        "相談用要約エラー:",
-                        repr(e),
-                        flush=True
-                    )
-
                     # 詳しいエラー内容を開発者確認用に保存する
                     st.session_state[
                         "summary_error_message"
