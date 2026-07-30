@@ -835,19 +835,18 @@ with st.container(border=True):
     st.markdown(
         """
         <div style="
-            border: 1px solid #bbf7d0;
+            border: 1px solid #d8b4fe;
             border-radius: 14px;
             padding: 12px 14px;
-            margin: 12px 0 16px 0;
-            background-color: #f0fdf4;
+            margin: 10px 0 16px 0;
+            background-color: #faf5ff;
             color: #374151;
+            line-height: 1.6;
         ">
-            <b>このアプリで目指していること</b><br>
-            記録を残していくことで、次回同じような場面になったときに、
-            過去にうまくいった対応を参考にしやすくなります。<br><br>
-
-            AIのヒントと過去の成功ログを組み合わせることで、
-            一人ひとりに合った支援を考えやすくすることを目指しています。
+            <b>ここで振り返ること</b><br>
+            この場面で感じた不安や負担感、相談の必要性、対応結果を振り返ります。<br>
+            正解はありません。今の感覚に近いものを選んでください。<br>
+            記録しておくことで、あとから自分の状態や支援場面の変化を振り返る手がかりになります。
         </div>
         """,
         unsafe_allow_html=True
@@ -1652,27 +1651,21 @@ with st.container(border=True, key="step5_card"):
     st.caption("この場面で対応を考えたときの、不安や負担感、対応結果を振り返ってみてください。")
 
     st.markdown(
-    """
-    <div style="
-        border: 1px solid #d8b4fe;
-        border-radius: 14px;
-        padding: 12px 14px;
-        margin: 10px 0 16px 0;
-        background-color: #faf5ff;
-        color: #374151;
-    ">
-        <b>ここで振り返ること</b><br>
-        この場面で感じた不安や負担感、相談の必要性、
-        対応結果を振り返ります。<br><br>
-
-        正解はありません。
-        今の感覚に近いものを選んでください。<br><br>
-
-        記録しておくことで、あとから自分の状態や
-        支援場面の変化を振り返る手がかりになります。
-    </div>
-    """,
-    unsafe_allow_html=True
+        '<div style="'
+        'border: 1px solid #d8b4fe;'
+        'border-radius: 14px;'
+        'padding: 10px 14px;'
+        'margin: 10px 0 12px 0;'
+        'background-color: #faf5ff;'
+        'color: #374151;'
+        'line-height: 1.55;'
+        '">'
+        '<b>ここで振り返ること</b><br>'
+        'この場面で感じた不安や負担感、相談の必要性、対応結果を振り返ります。<br>'
+        '正解はありません。今の感覚に近いものを選んでください。<br><br>'
+        '記録しておくことで、あとから自分の状態や支援場面の変化を振り返る手がかりになります。'
+        '</div>',
+        unsafe_allow_html=True
     )
 
     anxiety = st.radio(
