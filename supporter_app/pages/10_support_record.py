@@ -1520,7 +1520,15 @@ with st.container(border=True, key="step6_card"):
 
             # AI対応例がまだ作成されていない場合だけ作成する
             if st.session_state["ai_advice_text"] == "":
-                ai_advice = generate_ai_advice(ai_input_data)
+
+                with st.spinner(
+                    "AIが対応のヒントを整理しています。"
+                    "回答が表示されるまで、そのままお待ちください。"
+                ):
+                    ai_advice = generate_ai_advice(
+                        ai_input_data
+                    )
+
                 st.session_state["ai_advice_text"] = ai_advice
 
         if st.session_state["ai_advice_requested"] and st.session_state["ai_advice_text"] != "":
