@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
 import openai
 from openai import OpenAI
@@ -113,6 +114,26 @@ if "is_logged_in" not in st.session_state:
 if "participant_id" not in st.session_state:
     st.session_state["participant_id"] = ""
 
+# 支援場面の場所を覚えておく箱
+if "location" not in st.session_state:
+    st.session_state["location"] = "選択してください"
+
+# 支援者の立場を覚えておく箱
+if "supporter" not in st.session_state:
+    st.session_state["supporter"] = "選択してください"
+
+# 支援場面の時期を覚えておく箱
+if "event_timing" not in st.session_state:
+    st.session_state["event_timing"] = "選択してください"
+
+# そのとき何が起きていたかを覚えておく箱
+if "situation_detail" not in st.session_state:
+    st.session_state["situation_detail"] = ""
+
+# 支援を受ける方の状態を覚えておく箱
+if "status" not in st.session_state:
+    st.session_state["status"] = "選択してください"
+
 #困りごとのカテゴリーを入れておく箱
 if "support_category" not in st.session_state:
     st.session_state["support_category"] = "選択してください"
@@ -154,6 +175,24 @@ if "summary_text" not in st.session_state:
 # 相談用要約の作成に失敗した理由を覚えておく箱
 if "summary_error_message" not in st.session_state:
     st.session_state["summary_error_message"] = ""
+
+# 現在表示する画面を覚えておく箱
+# home：ホーム画面
+# hint：今すぐヒント画面
+# record：記録を残す画面
+# history：過去の記録画面
+# summary：相談メモ画面
+if "current_screen" not in st.session_state:
+    st.session_state["current_screen"] = "home"
+
+# ヒント画面から記録画面へ進んだかを覚えておく箱
+if "record_from_hint" not in st.session_state:
+    st.session_state["record_from_hint"] = False
+
+# 記録画面へ移動した直後に、
+# Step5の位置へ画面を移動するか覚えておく箱
+if "scroll_to_record" not in st.session_state:
+    st.session_state["scroll_to_record"] = False
 
 
 # ------------------------------
@@ -308,6 +347,163 @@ if not st.session_state["is_logged_in"]:
 if not st.session_state["is_logged_in"]:
     st.info("配布されたIDとパスワードを入力して、ログインしてください")
     st.stop()
+
+# ------------------------------
+# ログイン後のホーム画面
+# 利用者が今したいことを選ぶ
+# ------------------------------
+if st.session_state["current_screen"] == "home":
+
+    st.title("AI支援ナビ")
+    st.subheader("今したいことを選んでください")
+
+    st.caption(
+        "必要な機能を1つ選んで進んでください。"
+    )
+
+    # 1段目のボタン
+    col_hint, col_record = st.columns(2)
+
+    with col_hint:
+        if st.button(
+            "💡 今すぐヒント",
+            use_container_width=True
+        ):
+            # 新しい支援場面を始めるため、前回の入力内容を初期化する
+            st.session_state["location"] = "選択してください"
+            st.session_state["supporter"] = "選択してください"
+            st.session_state["event_timing"] = "選択してください"
+            st.session_state["situation_detail"] = ""
+            st.session_state["status"] = "選択してください"
+            st.session_state["support_category"] = "選択してください"
+
+            # 前回のAIヒントも初期化する
+            st.session_state["ai_advice_requested"] = False
+            st.session_state["ai_advice_text"] = ""
+            st.session_state["ai_advice_source"] = ""
+            st.session_state["ai_error_message"] = ""
+
+            # 今回は新しい記録なので初期状態に戻す
+            st.session_state["record_saved"] = False
+            st.session_state["record_from_hint"] = False
+            
+            # ヒント画面を表示する状態にする
+            st.session_state["current_screen"] = "hint"
+
+            # 対応を考え始めた時間を記録する
+            st.session_state["start_time"] = time.time()
+
+            st.rerun()
+
+    with col_record:
+        if st.button(
+            "📝 記録を残す",
+            use_container_width=True
+        ):
+            # 新しい記録を始めるため、前回の入力内容を初期化する
+            st.session_state["location"] = "選択してください"
+            st.session_state["supporter"] = "選択してください"
+            st.session_state["event_timing"] = "選択してください"
+            st.session_state["situation_detail"] = ""
+            st.session_state["status"] = "選択してください"
+            st.session_state["support_category"] = "選択してください"
+
+            # 前回のAIヒントも初期化する
+            st.session_state["ai_advice_requested"] = False
+            st.session_state["ai_advice_text"] = ""
+            st.session_state["ai_advice_source"] = ""
+            st.session_state["ai_error_message"] = ""
+
+            # 前回の対応内容も空にする
+            st.session_state["action_text"] = ""
+
+            # ホームから直接記録を開始したことを覚える
+            st.session_state["record_saved"] = False
+            st.session_state["record_from_hint"] = False
+
+            
+            # 記録画面を表示する状態にする
+            st.session_state["current_screen"] = "record"
+            st.session_state["record_from_hint"] = False
+
+            # 記録を始めた時間を記録する
+            st.session_state["start_time"] = time.time()
+
+            st.rerun()
+
+    # 2段目のボタン
+    col_history, col_summary = st.columns(2)
+
+    with col_history:
+        if st.button(
+            "📚 過去の記録",
+            use_container_width=True
+        ):
+            # 過去の記録画面を表示する状態にする
+            st.session_state["current_screen"] = "history"
+
+            st.rerun()
+
+    with col_summary:
+        if st.button(
+            "📄 相談メモ",
+            use_container_width=True
+        ):
+            # 既存の相談用要約画面を利用する
+            st.session_state["current_screen"] = "summary"
+            st.session_state["summary_requested"] = True
+
+            # 前回の相談メモをいったん空にする
+            st.session_state["summary_text"] = ""
+            st.session_state["summary_error_message"] = ""
+
+            st.rerun()
+
+    st.info(
+        "💡 対応に迷っているときは「今すぐヒント」、"
+        "対応後の内容を残したいときは「記録を残す」を選んでください。"
+    )
+
+    # ホーム画面より下にある入力画面を表示しない
+    st.stop()
+
+
+# ------------------------------
+# 過去の記録画面
+# 現時点では仮の画面だけ表示する
+# ------------------------------
+if st.session_state["current_screen"] == "history":
+
+    st.title("AI支援ナビ")
+    st.subheader("📚 過去の記録")
+
+    st.info(
+        "過去の記録を振り返る画面は、"
+        "次の段階で作成します。"
+    )
+
+    if st.button(
+        "⬅️ ホーム画面へ戻る",
+        use_container_width=True
+    ):
+        st.session_state["current_screen"] = "home"
+        st.rerun()
+
+    # 過去の記録画面より下を表示しない
+    st.stop()
+
+
+# ------------------------------
+# 入力画面からホームへ戻るボタン
+# ------------------------------
+if st.session_state["current_screen"] in ["hint", "record"]:
+
+    if st.button(
+        "⬅️ ホーム画面へ戻る",
+        use_container_width=True
+    ):
+        st.session_state["current_screen"] = "home"
+        st.rerun()
 
 def build_summary_prompt(summary_records_text):
     """
@@ -739,13 +935,14 @@ if st.session_state["summary_requested"]:
                     st.write("相談したいこと：", consult_topic_text)
                     st.write("心理的負担：", mental_load_value)
 
-    #保存完了画面へ戻るボタン
+    #ホーム画面に戻るボタン
     if st.button(
-            "⬅️ 保存完了画面へ戻る",
-            use_container_width=True
-        ):
-            st.session_state["summary_requested"] = False
-            st.rerun()
+         "⬅️ ホーム画面へ戻る",
+         use_container_width=True
+    ):
+        st.session_state["summary_requested"] = False
+        st.session_state["current_screen"] = "home"
+        st.rerun()
 
     #現段階では、読み込み後にここで処理を止める
     st.stop()
@@ -762,6 +959,14 @@ if st.session_state["record_saved"]:
     )
 
     st.markdown("### 次に行うことを選んでください")
+
+    if st.button(
+        "🏠 ホーム画面へ戻る",
+        use_container_width=True
+    ):
+        st.session_state["record_saved"] = False
+        st.session_state["current_screen"] = "home"
+        st.rerun()
 
     if st.button(
         "📝 直近5件から相談用要約を作る",
@@ -810,71 +1015,111 @@ if st.session_state["record_saved"]:
 # st.info(f"現在の入力モードは： {st.session_state['condition']}")
 # st.caption("※ログイン後から保存ボタンを押すまでの時間は、自動で記録されます")
 
+#ヒントから記録画面へ進んだ場合は、
+#step1・step2を非表示にしても入力内容を保持する
+if (
+    st.session_state["current_screen"] == "record"
+    and st.session_state["record_from_hint"]
+):
+    st.session_state["location"] = st.session_state["location"]
+    st.session_state["supporter"] = st.session_state["supporter"]
+    st.session_state["event_timing"] = st.session_state["event_timing"]
+    st.session_state["situation_detail"] = st.session_state["situation_detail"]
+    st.session_state["status"] = st.session_state["status"]
+    st.session_state["support_category"] = st.session_state["support_category"]
+
+#画面を切り替えても使えるように、
+#session_stateから現在の入力内容を取り出す
+location = st.session_state["location"]
+supporter = st.session_state["supporter"]
+event_timing = st.session_state["event_timing"]
+situation_detail = st.session_state["situation_detail"]
+status = st.session_state["status"]
+support_category = st.session_state["support_category"]
+
+
+
 # ------------------------------
 # はじめに：入力の全体の流れ
 # 利用者が最初に全体像をつかめるようにする説明カード
 # ------------------------------
-with st.container(border=True):
-    st.markdown("#### はじめに：入力の全体の流れ")
+if st.session_state["current_screen"] == "hint":
 
-    st.markdown(
-        """
-        このアプリは、支援場面の状況を上から順番に記録していくアプリです。
+    with st.container(border=True):
 
-        まず、基本情報を選び、現在の状態と困りごとを整理します。
+        st.markdown("#### 💡 今の対応を考えるヒントを確認します")
 
-        その後、AIからのヒントや過去の成功ログを参考にしながら、
-        今回の対応内容を考えます。
+        st.markdown(
+            """
+            今、対応に迷っている場面について、
+            状況を簡単に選びながらAIからのヒントを確認する画面です。
 
-        最後に、不安や負担感、対応結果を入力し、記録を保存します。
+            AIが対応を決めるのではなく、
+            次の対応を考えるための参考情報として利用します。
+            """
+        )
 
-        詳しい入力内容は、各Stepの「ここで入力すること」を確認してください。
-        """
-    )
+        st.markdown(
+            """
+            <div style="
+                border: 1px solid #bae6fd;
+                border-radius: 14px;
+                padding: 12px 14px;
+                margin: 12px 0 4px 0;
+                background-color: #f0f9ff;
+                color: #374151;
+            ">
+                <b>入力の流れ</b><br>
+                Step1：基本情報<br>
+                Step2：支援場面の状況<br>
+                Step3：困りごとを選ぶ<br>
+                Step4：AIからのヒントを確認
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    st.markdown(
-        """
-        <div style="
-            border: 1px solid #d8b4fe;
-            border-radius: 14px;
-            padding: 12px 14px;
-            margin: 10px 0 16px 0;
-            background-color: #faf5ff;
-            color: #374151;
-            line-height: 1.6;
-        ">
-            <b>ここで振り返ること</b><br>
-            この場面で感じた不安や負担感、相談の必要性、対応結果を振り返ります。<br>
-            正解はありません。今の感覚に近いものを選んでください。<br>
-            記録しておくことで、あとから自分の状態や支援場面の変化を振り返る手がかりになります。
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+# ------------------------------
+# 記録画面：最初の案内
+# ホームから直接「記録を残す」を選んだ場合だけ表示する
+# ------------------------------
+if (
+    st.session_state["current_screen"] == "record"
+    and not st.session_state["record_from_hint"]
+):
+    with st.container(border=True):
 
-    st.markdown(
-        """
-        <div style="
-            border: 1px solid #fbcfe8;
-            border-radius: 14px;
-            padding: 12px 14px;
-            margin: 12px 0 4px 0;
-            background-color: #fff7fb;
-            color: #374151;
-        ">
-            <b>入力の順番</b><br>
-            Step1：基本情報<br>
-            Step2：現在の状態<br>
-            Step3：AI支援ナビ<br>
-            Step4：AIからの対応ヒント<br>
-            Step5：対応内容の記録<br>
-            Step6：不安・負担感・対応結果<br>
-            Step7：入力内容を保存
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        st.markdown("#### 📝 支援場面を記録します")
 
+        st.markdown(
+            """
+            対応が終わったあとに、今回の状況や対応内容を残しておく画面です。
+
+            記録しておくことで、あとから振り返ったり、
+            過去の記録や相談メモに活用したりできます。
+            """
+        )
+
+        st.markdown(
+            """
+            <div style="
+                border: 1px solid #fbcfe8;
+                border-radius: 14px;
+                padding: 12px 14px;
+                margin: 12px 0 4px 0;
+                background-color: #fff7fb;
+                color: #374151;
+            ">
+                <b>入力の流れ</b><br>
+                Step1：基本情報<br>
+                Step2：支援場面の状況<br>
+                Step3：対応内容の記録<br>
+                Step4：振り返り<br>
+                Step5：保存
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 
 
@@ -882,78 +1127,84 @@ with st.container(border=True):
 # Step1：基本情報
 # 場所と支援者の立場を入力するカード
 # ------------------------------
-with st.container(border=True,key="step1_card"):
+if not (
+    st.session_state["current_screen"] == "record"
+    and st.session_state["record_from_hint"]
+):
+    with st.container(border=True,key="step1_card"):
 
-    st.markdown(
-    """
-    <div style="
-        background-color: #fff0f6;
-        border: 1.5px solid #f9a8d4;
-        border-radius: 16px;
-        padding: 14px 16px;
-        margin-bottom: 16px;
-    ">
-        <div style="
-            font-size: 24px;
-            font-weight: bold;
-            color: #374151;
-        ">
-            🌸 Step1：基本情報
-        </div>
-        <div style="
-            font-size: 14px;
-            color: #6b7280;
-            margin-top: 6px;
-        ">
-            まず、今回の支援場面について、場所とあなたの立場を選んでください。
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-    st.markdown(
+        st.markdown(
         """
         <div style="
-            border: 1px solid #fbcfe8;
-            border-radius: 14px;
-            padding: 12px 14px;
-            margin: 10px 0 16px 0;
-            background-color: #fff7fb;
-            color: #374151;
+            background-color: #fff0f6;
+            border: 1.5px solid #f9a8d4;
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
         ">
-            <b>ここで入力すること</b><br>
-            どこで、どの立場で支援している場面なのかを記録します。
+            <div style="
+                font-size: 24px;
+                font-weight: bold;
+                color: #374151;
+            ">
+                🌸 Step1：基本情報
+            </div>
+            <div style="
+                font-size: 14px;
+                color: #6b7280;
+                margin-top: 6px;
+            ">
+                まず、今回の支援場面について、場所とあなたの立場を選んでください。
+            </div>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    col_location, col_supporter = st.columns(2)
-
-    with col_location:
-        location = st.radio(
-            "📍[必須] 場所を選んでください",
-            [
-                "選択してください",
-                "自宅",
-                "学校",
-                "職場",
-                "その他"
-            ]
+        st.markdown(
+            """
+            <div style="
+                border: 1px solid #fbcfe8;
+                border-radius: 14px;
+                padding: 12px 14px;
+                margin: 10px 0 16px 0;
+                background-color: #fff7fb;
+                color: #374151;
+            ">
+                <b>ここで入力すること</b><br>
+                どこで、どの立場で支援している場面なのかを記録します。
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
-    with col_supporter:
-        supporter = st.radio(
-            "👤 [必須]あなたの立場を選んでください",
-            [
-                "選択してください",
-                "家族",
-                "支援員",
-                "教員",
-                "その他"
-            ]
-        )
+        col_location, col_supporter = st.columns(2)
+
+        with col_location:
+            location = st.radio(
+                "📍[必須] 場所を選んでください",
+                [
+                    "選択してください",
+                    "自宅",
+                    "学校",
+                    "職場",
+                    "その他"
+                ],
+                key = "location"
+            )
+
+        with col_supporter:
+            supporter = st.radio(
+                "👤 [必須]あなたの立場を選んでください",
+                [
+                    "選択してください",
+                    "家族",
+                    "支援員",
+                    "教員",
+                    "その他"
+                ],
+                key="supporter"
+            )
 
 
 
@@ -961,78 +1212,108 @@ with st.container(border=True,key="step1_card"):
 # Step2：支援を受ける方の現在の状態
 # 支援を受ける方の状態を選ぶカード
 # ------------------------------
-with st.container(border=True, key="step2_card"):
+if not (
+    st.session_state["current_screen"] == "record"
+    and st.session_state["record_from_hint"]
+):
 
-        st.markdown("### 🌼 Step2：支援場面の時期と、支援を受ける方の状態")
-        st.caption(
-            "この場面がいつ頃の出来事かと、そのときの状態を選んでください。"
-        )
+    with st.container(border=True, key="step2_card"):
 
-       
-        event_timing = st.radio(
-            "[必須]支援場面は、いつ頃の出来事ですか？",
-            [
-                "選択してください",
-                "現在（今、起こっている）",
-                "今日（今より前）",
-                "昨日",
-                "2日～7日前",
-                "8日以上前",
-                "覚えていない"
-            ]
-        )
-
-        st.caption(
-            "あとで相談相手に状況を伝えるときや、"
-            "相談用の要約を作るときに役立ちます。"
-            "記入しなくても大丈夫です"
-        )
-
-        st.info(
-            "⚠️ **個人情報の入力にご注意ください**\n\n"
-            "個人名や学校名・施設名など、個人が特定できる情報は"
-            "入力しないでください。\n\n"
-            "「本人」「学校」「施設」などに置き換えて入力してください。"
-        )
-
-        situation_detail = st.text_area(
-            "[任意]そのとき、何が起きていましたか？（一言でも大丈夫です）",
-            placeholder="例：予定が急に変わり、大きな声を出してしまいました",
-            height=80
-        )
-
-        status = st.radio(
-            "🌱 [必須]そのときの、支援を受ける方の状態を選んでください",
-            [
-                "選択してください",
-                "安定",
-                "少し不安",
-                "しんどい",
-                "パニック",
-                "どれに近いかわからない"
-            ]
-        )
-
-        # ------------------------------
-        # Step2で「パニック」が選ばれた場合だけ、
-        # 緊急時の安全確認ボタンを表示する
-        # ------------------------------
-        if status == "パニック":
-
-            st.warning(
-                "⚠️ パニックに近い状態が選ばれています。\n\n"
-                "まずは本人と周囲の安全を確認してください。"
+            st.markdown("### 🌼 Step2：支援場面の時期と、支援を受ける方の状態")
+            st.caption(
+                "この場面がいつ頃の出来事かと、そのときの状態を選んでください。"
             )
 
-            if st.button("🚨 緊急時の確認を表示する", use_container_width=True):
+        
+            event_timing = st.radio(
+                "[必須]支援場面は、いつ頃の出来事ですか？",
+                [
+                    "選択してください",
+                    "現在（今、起こっている）",
+                    "今日（今より前）",
+                    "昨日",
+                    "2日～7日前",
+                    "8日以上前",
+                    "覚えていない"
+                ],
+                key="event_timing"
+            )
 
-                st.info(
-                    "緊急時の確認\n\n"
-                    "・けが、急な体調悪化、火災などで救急車・消防車が必要な場合：119\n\n"
-                    "・事件、事故、暴力など緊急の危険がある場合：110\n\n"
-                    "・緊急ではないが警察に相談したい場合：#9110\n\n"
-                    "・一人で対応し続けるのが難しい場合：所属先の責任者、家族、支援機関に共有\n\n"
-                    "※この表示は医療的判断や専門的診断ではありません。"
+            st.caption(
+                "あとで相談相手に状況を伝えるときや、"
+                "相談用の要約を作るときに役立ちます。"
+                "記入しなくても大丈夫です"
+            )
+
+            st.info(
+                "⚠️ **個人情報の入力にご注意ください**\n\n"
+                "個人名や学校名・施設名など、個人が特定できる情報は"
+                "入力しないでください。\n\n"
+                "「本人」「学校」「施設」などに置き換えて入力してください。"
+            )
+
+            situation_detail = st.text_area(
+                "[任意]そのとき、何が起きていましたか？（一言でも大丈夫です）",
+                placeholder="例：予定が急に変わり、大きな声を出してしまいました",
+                height=80,
+                key="situation_detail"
+            )
+
+            status = st.radio(
+                "🌱 [必須]そのときの、支援を受ける方の状態を選んでください",
+                [
+                    "選択してください",
+                    "安定",
+                    "少し不安",
+                    "しんどい",
+                    "パニック",
+                    "どれに近いかわからない"
+                ],
+                key="status"
+            )
+
+            # ------------------------------
+            # Step2で「パニック」が選ばれた場合だけ、
+            # 緊急時の安全確認ボタンを表示する
+            # ------------------------------
+            if status == "パニック":
+
+                st.warning(
+                    "⚠️ パニックに近い状態が選ばれています。\n\n"
+                    "まずは本人と周囲の安全を確認してください。"
+                )
+
+                if st.button("🚨 緊急時の確認を表示する", use_container_width=True):
+
+                    st.info(
+                        "緊急時の確認\n\n"
+                        "・けが、急な体調悪化、火災などで救急車・消防車が必要な場合：119\n\n"
+                        "・事件、事故、暴力など緊急の危険がある場合：110\n\n"
+                        "・緊急ではないが警察に相談したい場合：#9110\n\n"
+                        "・一人で対応し続けるのが難しい場合：所属先の責任者、家族、支援機関に共有\n\n"
+                        "※この表示は医療的判断や専門的診断ではありません。"
+                    )
+                        # ------------------------------
+            # 記録用：今回の困りごとの種類
+            # 過去ログの振り返りや相談メモ作成に使用する
+            # ------------------------------
+            if (
+                st.session_state["current_screen"] == "record"
+                and not st.session_state["record_from_hint"]
+            ):
+                st.markdown("#### 今回の困りごと")
+
+                st.radio(
+                    "[必須]今回、どのようなことで困りましたか？",
+                    [
+                        "選択してください",
+                        "声かけに迷う",
+                        "感情が高ぶっている",
+                        "予定変更で混乱している",
+                        "外出を嫌がっている",
+                        "支援者自身が疲れている"
+                    ],
+                    key="support_category"
                 )
 
 
@@ -1041,196 +1322,207 @@ with st.container(border=True, key="step2_card"):
 # Step3：AI支援ナビ
 # 困りごとのカテゴリを選ぶカード
 # ------------------------------
-with st.container(border=True, key="step3_card"):
-
-    st.markdown("### 🤖 Step3：AI支援ナビ")
-    st.caption(
-        "AIが答えを決めるのではなく、"
-        "AIの提案と過去の成功ログを参考にしながら、"
-        "支援者が次の対応を考えるためのステップです。"               
-    )
-
-    st.markdown(
-        """
-        <div style="
-            border: 1px solid #bae6fd;
-            border-radius: 14px;
-            padding: 12px 14px;
-            margin: 10px 0 16px 0;
-            background-color: #f0f9ff;
-            color: #374151;
-        ">
-            <b>ここで行うこと</b><br>
-            ①今の困りごとを選びます。<br>
-            ②AIからのヒントを確認します。<br>
-            ③過去の成功ログも参考にしながら、今回の対応を考えます。<br><br>
-           
-            AIは答えを決めるものではありません。
-            支援者が自分で判断するための手がかりを整理します。
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("💬 支援を受ける方の声かけに迷う", use_container_width=True):
-            st.session_state["support_category"] = "声かけに迷う"
-            st.session_state["ai_advice_requested"] = False
-            st.session_state["ai_advice_text"] = ""
-            st.session_state["ai_advice_source"] = ""
-            st.session_state["ai_error_message"] = ""
-
-    with col2:
-        if st.button("🌊 支援を受ける方の感情が高ぶっている", use_container_width=True):
-            st.session_state["support_category"] = "感情が高ぶっている"
-            st.session_state["ai_advice_requested"] = False
-            st.session_state["ai_advice_text"] = ""
-            st.session_state["ai_advice_source"] = ""
-            st.session_state["ai_error_message"] = ""
-
-    col3, col4 = st.columns(2)
-
-    with col3:
-        if st.button("📅 支援を受ける方が予定変更で混乱している", use_container_width=True):
-            st.session_state["support_category"] = "予定変更で混乱している"
-            st.session_state["ai_advice_requested"] = False
-            st.session_state["ai_advice_text"] = ""
-            st.session_state["ai_advice_source"] = ""
-            st.session_state["ai_error_message"] = ""
-
-    with col4:
-        if st.button("🏠 支援を受ける方が外出を嫌がっている", use_container_width=True):
-            st.session_state["support_category"] = "外出を嫌がっている"
-            st.session_state["ai_advice_requested"] = False
-            st.session_state["ai_advice_text"] = ""
-            st.session_state["ai_advice_source"] = ""
-            st.session_state["ai_error_message"] = ""
-
-    if st.button("🫧 支援している自分が疲れている", use_container_width=True):
-        st.session_state["support_category"] = "支援者自身が疲れている"
-        st.session_state["ai_advice_requested"] = False
-        st.session_state["ai_advice_text"] = ""
-        st.session_state["ai_advice_source"] = ""
-        st.session_state["ai_error_message"] = ""
-
-
-support_category = st.session_state["support_category"]
-
-if support_category != "選択してください" and SHOW_BASIC_ADVICE:
-    st.markdown(
-        f"""
-        <div style="
-            border: 1px solid #dbeafe;
-            border-radius: 16px;
-            padding: 14px 16px;
-            margin: 12px 0 16px 0;
-            background-color: #eff6ff;
-            color: #1f2937;
-        ">
-            <div style="font-size: 14px; color: #2563eb; font-weight: bold;">
-                ✅ 選択中の困りごと
-            </div>
-            <div style="font-size: 18px; font-weight: bold; margin-top: 6px;">
-                {support_category}
-            </div>
-            <div style="font-size: 14px; color: #374151; margin-top: 6px;">
-                この内容に合わせて、対応例とAIのヒントを表示します。
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-if support_category != "選択してください" and SHOW_BASIC_ADVICE:
-
-    st.markdown("#### 今できる対応のヒント")
-
-    if support_category == "声かけに迷う":
-        st.info(
-            "💬 声かけに迷うとき\n\n"
-            "・短い言葉で声をかける\n\n" 
-            "・一度に多く説明しない\n\n"
-            "・相手の反応を待つ"
-        )
-
-    elif support_category == "感情が高ぶっている":
-        st.info(
-            "🌊 感情が高ぶっているとき\n\n"
-            "・自分の安全を確認する\n\n"
-            "・無理に説得しない\n\n"
-            "・落ち着ける場所や時間を確保する\n\n" 
-            "・好きな物などを見せる"
-        )
-
-        st.markdown("#### 🔔 安全確認・共有の参考")
-        st.caption("※感情が高ぶっている場面で、支援者が一人で抱え込まないための参考情報です")
-        st.info(
-            "本人や周囲の安全を確認しながら、支援者が一人で対応し続けないことも大切です。\n\n"
-            "・危険がありそうな場合は、距離を取り、安全な場所を確保する\n\n"
-            "・対応を一人で続けるのが難しい場合は、他の支援者や責任者に共有する\n\n"
-            "・所属先の緊急時対応ルールがある場合は、それに従う"
-        )
-
-    elif support_category == "予定変更で混乱している":
-        st.info(
-            "📅 予定変更で混乱している\n\n"
-            "・絵や文字を書いて見える形にする\n\n"
-            "・次に何をするかを1つずつ示す\n\n"
-            "・変更点を短く伝える"
-        )
-
-    elif support_category == "外出を嫌がっている":
-        st.info(
-            "🏠 外出を嫌がっている\n\n"
-            "・理由を急いで聞き出さない\n\n"
-            "・外出の目的を短く伝える\n\n"
-            "・小さな一歩から提案する"
-        )
-
-    elif support_category == "支援者自身が疲れている":
-        st.info(
-            "🫧 支援者自身が疲れている\n\n"
-            "ここまで対応しようとしていること自体が、大切な支援です。\n\n"
-            "今すぐ完璧に対応しようとせず、まずは支援者自身の負担を少し軽くする方法を考えてみてください。"
-        )
-        
-        st.markdown("#### 🫧 支援者自身のための選択肢")
-        st.caption("※今の自分に対して、良いと思う事を選んで確認してください")
-
-        self_care_choice = st.radio(
-            "今の自分に近いものを選んでください",
-            [
-                "選択してください",
-                "少し休む・距離を取る",
-                "誰かに共有する",
-                "あとで相談できるように記録する",
-            ]
-        )
-
-        if self_care_choice == "少し休む・距離を取る":
-            st.info(
-                "🫧 少し休む・距離を取る\n\n"
-                "今すぐすべてを解決しようとしなくても大丈夫です。\n\n"
-                "可能であれば、少し距離を取る、深呼吸をする、数分だけ落ち着く時間をつくるなど、自分自身を整える行動を検討してください。"
-                )
-
-        elif self_care_choice == "誰かに共有する":
-            st.info(
-                "🤝 誰かに共有する\n\n"
-                "一人で抱え込まないことも、大切な支援です。\n\n"
-                "必要に応じて、他の支援者、責任者、教員、家族など、普段から相談できる人に状況を共有してください。"
-                )
-
-        elif self_care_choice == "あとで相談できるように記録する":
-            st.info(
-                "📝 あとで相談できるように記録する\n\n"
-                "今すぐ相談できない場合は、あとで振り返れるように、状況を短く残しておくことも役立ちます。\n\n"
-                "「何が起きたか」「自分が困ったこと」「次に相談したいこと」を簡単に記録しておくと、後で共有しやすくなります。"
-                )
+if st.session_state["current_screen"] == "hint":
     
-#AI支援ナビ：AIに渡す文章を作る関数
+    with st.container(border=True, key="step3_card"):
+
+        st.markdown("### 🤖 Step3：AI支援ナビ")
+        st.caption(
+            "AIが答えを決めるのではなく、"
+            "AIの提案と過去の成功ログを参考にしながら、"
+            "支援者が次の対応を考えるためのステップです。"               
+        )
+
+        st.markdown(
+            """
+            <div style="
+                border: 1px solid #bae6fd;
+                border-radius: 14px;
+                padding: 12px 14px;
+                margin: 10px 0 16px 0;
+                background-color: #f0f9ff;
+                color: #374151;
+            ">
+                <b>ここで行うこと</b><br>
+                ①今の困りごとを選びます。<br>
+                ②AIからのヒントを確認します。<br>
+                ③過去の成功ログも参考にしながら、今回の対応を考えます。<br><br>
+            
+                AIは答えを決めるものではありません。
+                支援者が自分で判断するための手がかりを整理します。
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("💬 支援を受ける方の声かけに迷う", use_container_width=True):
+                st.session_state["support_category"] = "声かけに迷う"
+                st.session_state["ai_advice_requested"] = False
+                st.session_state["ai_advice_text"] = ""
+                st.session_state["ai_advice_source"] = ""
+                st.session_state["ai_error_message"] = ""
+
+        with col2:
+            if st.button("🌊 支援を受ける方の感情が高ぶっている", use_container_width=True):
+                st.session_state["support_category"] = "感情が高ぶっている"
+                st.session_state["ai_advice_requested"] = False
+                st.session_state["ai_advice_text"] = ""
+                st.session_state["ai_advice_source"] = ""
+                st.session_state["ai_error_message"] = ""
+
+        col3, col4 = st.columns(2)
+
+        with col3:
+            if st.button("📅 支援を受ける方が予定変更で混乱している", use_container_width=True):
+                st.session_state["support_category"] = "予定変更で混乱している"
+                st.session_state["ai_advice_requested"] = False
+                st.session_state["ai_advice_text"] = ""
+                st.session_state["ai_advice_source"] = ""
+                st.session_state["ai_error_message"] = ""
+
+        with col4:
+            if st.button("🏠 支援を受ける方が外出を嫌がっている", use_container_width=True):
+                st.session_state["support_category"] = "外出を嫌がっている"
+                st.session_state["ai_advice_requested"] = False
+                st.session_state["ai_advice_text"] = ""
+                st.session_state["ai_advice_source"] = ""
+                st.session_state["ai_error_message"] = ""
+
+        if st.button("🫧 支援している自分が疲れている", use_container_width=True):
+            st.session_state["support_category"] = "支援者自身が疲れている"
+            st.session_state["ai_advice_requested"] = False
+            st.session_state["ai_advice_text"] = ""
+            st.session_state["ai_advice_source"] = ""
+            st.session_state["ai_error_message"] = ""
+
+
+    support_category = st.session_state["support_category"]
+
+    if (
+        support_category != "選択してください" 
+        and SHOW_BASIC_ADVICE
+        and st.session_state["current_screen"] == "hint"
+    ):
+        
+        st.markdown(
+            f"""
+            <div style="
+                border: 1px solid #dbeafe;
+                border-radius: 16px;
+                padding: 14px 16px;
+                margin: 12px 0 16px 0;
+                background-color: #eff6ff;
+                color: #1f2937;
+            ">
+                <div style="font-size: 14px; color: #2563eb; font-weight: bold;">
+                    ✅ 選択中の困りごと
+                </div>
+                <div style="font-size: 18px; font-weight: bold; margin-top: 6px;">
+                    {support_category}
+                </div>
+                <div style="font-size: 14px; color: #374151; margin-top: 6px;">
+                    この内容に合わせて、対応例とAIのヒントを表示します。
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    if (
+        support_category != "選択してください" 
+        and SHOW_BASIC_ADVICE
+        and st.session_state["current_screen"] == "hint"
+    ):
+
+        st.markdown("#### 今できる対応のヒント")
+
+        if support_category == "声かけに迷う":
+            st.info(
+                "💬 声かけに迷うとき\n\n"
+                "・短い言葉で声をかける\n\n" 
+                "・一度に多く説明しない\n\n"
+                "・相手の反応を待つ"
+            )
+
+        elif support_category == "感情が高ぶっている":
+            st.info(
+                "🌊 感情が高ぶっているとき\n\n"
+                "・自分の安全を確認する\n\n"
+                "・無理に説得しない\n\n"
+                "・落ち着ける場所や時間を確保する\n\n" 
+                "・好きな物などを見せる"
+            )
+
+            st.markdown("#### 🔔 安全確認・共有の参考")
+            st.caption("※感情が高ぶっている場面で、支援者が一人で抱え込まないための参考情報です")
+            st.info(
+                "本人や周囲の安全を確認しながら、支援者が一人で対応し続けないことも大切です。\n\n"
+                "・危険がありそうな場合は、距離を取り、安全な場所を確保する\n\n"
+                "・対応を一人で続けるのが難しい場合は、他の支援者や責任者に共有する\n\n"
+                "・所属先の緊急時対応ルールがある場合は、それに従う"
+            )
+
+        elif support_category == "予定変更で混乱している":
+            st.info(
+                "📅 予定変更で混乱している\n\n"
+                "・絵や文字を書いて見える形にする\n\n"
+                "・次に何をするかを1つずつ示す\n\n"
+                "・変更点を短く伝える"
+            )
+
+        elif support_category == "外出を嫌がっている":
+            st.info(
+                "🏠 外出を嫌がっている\n\n"
+                "・理由を急いで聞き出さない\n\n"
+                "・外出の目的を短く伝える\n\n"
+                "・小さな一歩から提案する"
+            )
+
+        elif support_category == "支援者自身が疲れている":
+            st.info(
+                "🫧 支援者自身が疲れている\n\n"
+                "ここまで対応しようとしていること自体が、大切な支援です。\n\n"
+                "今すぐ完璧に対応しようとせず、まずは支援者自身の負担を少し軽くする方法を考えてみてください。"
+            )
+            
+            st.markdown("#### 🫧 支援者自身のための選択肢")
+            st.caption("※今の自分に対して、良いと思う事を選んで確認してください")
+
+            self_care_choice = st.radio(
+                "今の自分に近いものを選んでください",
+                [
+                    "選択してください",
+                    "少し休む・距離を取る",
+                    "誰かに共有する",
+                    "あとで相談できるように記録する",
+                ]
+            )
+
+            if self_care_choice == "少し休む・距離を取る":
+                st.info(
+                    "🫧 少し休む・距離を取る\n\n"
+                    "今すぐすべてを解決しようとしなくても大丈夫です。\n\n"
+                    "可能であれば、少し距離を取る、深呼吸をする、数分だけ落ち着く時間をつくるなど、自分自身を整える行動を検討してください。"
+                    )
+
+            elif self_care_choice == "誰かに共有する":
+                st.info(
+                    "🤝 誰かに共有する\n\n"
+                    "一人で抱え込まないことも、大切な支援です。\n\n"
+                    "必要に応じて、他の支援者、責任者、教員、家族など、普段から相談できる人に状況を共有してください。"
+                    )
+
+            elif self_care_choice == "あとで相談できるように記録する":
+                st.info(
+                    "📝 あとで相談できるように記録する\n\n"
+                    "今すぐ相談できない場合は、あとで振り返れるように、状況を短く残しておくことも役立ちます。\n\n"
+                    "「何が起きたか」「自分が困ったこと」「次に相談したいこと」を簡単に記録しておくと、後で共有しやすくなります。"
+                    )
+        
+    #AI支援ナビ：AIに渡す文章を作る関数
 
 def build_ai_prompt(ai_input_data):
     """
@@ -1282,9 +1574,9 @@ def get_basic_advice(ai_input_data):
 
     if support_category == "声かけに迷う":
         ai_advice = """
- [AI対応例 : 声かけに迷う]
+[AI対応例 : 声かけに迷う]
 
- 1. まず最初に確認すること\n\n
+1. まず最初に確認すること\n\n
 &emsp;・相手が今、話を聞ける状態かを確認する\n\n
 &emsp;・表情や姿勢を見て、無理に話しかけない方がよいかを見る\n\n
 
@@ -1349,20 +1641,20 @@ def get_basic_advice(ai_input_data):
 【AI対応例：外出を嫌がっている】
 
 1. まず最初に確認すること\n\n
- &emsp;・体調が悪いのか、不安が強いのか、理由を急がずに確認する\n\n
- &emsp;・外出先、移動、時間、人混みなど、負担になりそうな点を見る\n\n
+&emsp;・体調が悪いのか、不安が強いのか、理由を急がずに確認する\n\n
+&emsp;・外出先、移動、時間、人混みなど、負担になりそうな点を見る\n\n
 
 2. 支援者がすぐに取れる対応例\n\n
- &emsp;・外出の目的を短く伝える\n\n
- &emsp;・「玄関まで」「靴を履くところまで」など小さな一歩に分ける\n\n
- &emsp;・無理に外へ出そうとせず、選択肢を出す\n\n
+&emsp;・外出の目的を短く伝える\n\n
+&emsp;・「玄関まで」「靴を履くところまで」など小さな一歩に分ける\n\n
+&emsp;・無理に外へ出そうとせず、選択肢を出す\n\n
 
 3. 無理をしないための注意点\n\n
- &emsp;・外出できるかどうかだけを成功・失敗で見ない\n\n
- &emsp;・支援者自身も焦りすぎない\n\n
+&emsp;・外出できるかどうかだけを成功・失敗で見ない\n\n
+&emsp;・支援者自身も焦りすぎない\n\n
 
 4. 必要に応じて相談する相手\n\n
- &emsp;・家族、支援員、教員など、本人の普段の様子を知っている人に相談する\n\n
+&emsp;・家族、支援員、教員など、本人の普段の様子を知っている人に相談する\n\n
 """
     elif support_category == "支援者自身が疲れている":
         ai_advice = """
@@ -1441,183 +1733,243 @@ def generate_ai_advice(ai_input_data):
 # Step4：AIからの対応ヒント
 # 入力内容をもとにAI対応例を表示するカード
 # ------------------------------
-with st.container(border=True, key="step6_card"):
+if st.session_state["current_screen"] == "hint":
 
-    st.markdown("### 🤖 Step4：AIからの対応ヒント")
-    st.caption("入力内容をもとに、次の対応を考えるヒントを確認します。")
+    
+    with st.container(border=True, key="step6_card"):
 
-    st.markdown(
-        """
-        <div style="
-            border: 1px solid #86efac;
-            border-radius: 14px;
-            padding: 12px 14px;
-            margin: 10px 0 16px 0;
-            background-color: #f0fdf4;
-            color: #374151;
-        ">
-            <b>ここで確認すること</b><br>
-            AIヒントは、支援者の判断を置き換えるものではありません。
-            ここまでの入力内容をもとに、次の対応を考えるための参考情報として確認します。
-            必要に応じて、過去ログ、自分の経験、周囲への相談と合わせて使ってください。
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        st.markdown("### 🤖 Step4：AIからの対応ヒント")
+        st.caption("入力内容をもとに、次の対応を考えるヒントを確認します。")
 
-    # ai_consult_target = consult_who if consult_need == "はい" else "なし"
+        st.markdown(
+            """
+            <div style="
+                border: 1px solid #86efac;
+                border-radius: 14px;
+                padding: 12px 14px;
+                margin: 10px 0 16px 0;
+                background-color: #f0fdf4;
+                color: #374151;
+            ">
+                <b>ここで確認すること</b><br>
+                AIヒントは、支援者の判断を置き換えるものではありません。
+                ここまでの入力内容をもとに、次の対応を考えるための参考情報として確認します。
+                必要に応じて、過去ログ、自分の経験、周囲への相談と合わせて使ってください。
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    # AIに渡す情報を1つの箱にまとめる
-    ai_input_data = {
-    "place": location,
-    "supporter_role": supporter,
-    "current_state": status,
-    "support_category": support_category,
-    }
+        # ai_consult_target = consult_who if consult_need == "はい" else "なし"
 
-    # まとめた情報をもとに、AIへ渡す文章を作る
-    ai_prompt = build_ai_prompt(ai_input_data)
+        # AIに渡す情報を1つの箱にまとめる
+        ai_input_data = {
+        "place": location,
+        "supporter_role": supporter,
+        "current_state": status,
+        "support_category": support_category,
+        }
 
-    if SHOW_AI_DEBUG:
+        # まとめた情報をもとに、AIへ渡す文章を作る
+        ai_prompt = build_ai_prompt(ai_input_data)
 
-        st.markdown("#### AIに渡す予定の情報（確認用）")
-        st.caption("※開発者確認用です。実証時は通常表示しません。")
+        if SHOW_AI_DEBUG:
 
-        with st.expander("AIに渡す予定の情報を確認する", expanded=False):
+            st.markdown("#### AIに渡す予定の情報（確認用）")
+            st.caption("※開発者確認用です。実証時は通常表示しません。")
 
-            st.markdown("#### 入力データ")
+            with st.expander("AIに渡す予定の情報を確認する", expanded=False):
 
-            st.info(
-            f"場所 : {location}\n\n"
-            f"支援者の立場 : {supporter}\n\n"
-            f"現在の状態 : {status}\n\n"
-            f"困りごとのカテゴリ : {support_category}\n\n"
-            )
+                st.markdown("#### 入力データ")
+
+                st.info(
+                f"場所 : {location}\n\n"
+                f"支援者の立場 : {supporter}\n\n"
+                f"現在の状態 : {status}\n\n"
+                f"困りごとのカテゴリ : {support_category}\n\n"
+                )
 
 
 
-            st.markdown("#### AIに渡すプロンプト")
-            st.text(ai_prompt)
+                st.markdown("#### AIに渡すプロンプト")
+                st.text(ai_prompt)
 
-    if support_category != "選択してください":
+        if support_category != "選択してください":
 
-        if st.button("🤖 AIからのヒントを受け取る", use_container_width=True):
+            if st.button("🤖 AIからのヒントを受け取る", use_container_width=True):
 
-            # AIヒントに必要な基本情報が選ばれているか確認する
-            if location == "選択してください":
-                st.error("先にStep1で場所を選択してください")
-                st.stop()
+                # AIヒントに必要な基本情報が選ばれているか確認する
+                if location == "選択してください":
+                    st.error("先にStep1で場所を選択してください")
+                    st.stop()
 
-            if supporter == "選択してください":
-                st.error("先にStep1であなたの立場を選択してください")
-                st.stop()
+                if supporter == "選択してください":
+                    st.error("先にStep1であなたの立場を選択してください")
+                    st.stop()
 
-            if status == "選択してください":
-                st.error("先にStep2で支援を受ける方の状態を選択してください")
-                st.stop()
+                if status == "選択してください":
+                    st.error("先にStep2で支援を受ける方の状態を選択してください")
+                    st.stop()
 
-            st.session_state["ai_advice_requested"] = True
+                st.session_state["ai_advice_requested"] = True
 
-            # AI対応例がまだ作成されていない場合だけ作成する
-            if st.session_state["ai_advice_text"] == "":
+                # AI対応例がまだ作成されていない場合だけ作成する
+                if st.session_state["ai_advice_text"] == "":
 
-                with st.spinner(
-                    "AIが対応のヒントを整理しています。"
-                    "回答が表示されるまで、そのままお待ちください。"
-                ):
-                    ai_advice = generate_ai_advice(
-                        ai_input_data
-                    )
-
-                st.session_state["ai_advice_text"] = ai_advice
-
-        if st.session_state["ai_advice_requested"] and st.session_state["ai_advice_text"] != "":
-
-            st.markdown(
-                """
-                <div style="
-                    border: 1px solid #86efac;
-                    border-radius: 14px;
-                    padding: 14px 16px;
-                    margin: 16px 0 8px 0;
-                    background-color: #f0fdf4;
-                    color: #374151;
-                ">
-                    <b>🤖 AIからのヒント</b><br>
-                    この対応例は、支援者が次の行動を考えるためのヒントです。
-                    医療的判断や診断ではありません。
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            st.markdown(st.session_state["ai_advice_text"])
-
-            # ------------------------------
-            # AI対応例のあとに、過去の成功ログを表示する
-            # AIの提案を判断するための参考材料として使う
-            # ------------------------------
-            if st.session_state["condition"] == "ログあり":
-
-                with st.expander("過去の成功ログを参考にする", expanded=False):
-
-                    st.info(
-                        "ここでは、今の状況に近い過去の成功ログを表示します。\n\n"
-                        "AIからのヒントだけで判断するのではなく、"
-                        "過去にうまくいった対応も参考にしながら、今回の対応を考えてください。\n\n"
-                        "記録が増えるほど、一人ひとりに合った支援のヒントが増えていきます。"
-                    )
-
-                    past_log = conn.read(worksheet="supporter_log", ttl=0)
-                    past_log = pd.DataFrame(past_log)
-
-                    past_log["participant_id"] = past_log["participant_id"].astype(str).str.strip()
-                    past_log["seen_status"] = past_log["seen_status"].astype(str).str.strip()
-                    past_log["support_category"] = past_log["support_category"].astype(str).str.strip()
-                    past_log["is_success"] = past_log["is_success"].astype(str).str.strip()
-
-                    past_log = past_log[past_log["participant_id"] == st.session_state["participant_id"]]
-                    past_log = past_log[past_log["seen_status"] == status]
-                    past_log = past_log[past_log["support_category"] == support_category]
-
-                    success_values = [
-                        "うまくいったと思う",
-                        "少しうまくいったと思う"
-                    ]
-
-                    past_log = past_log[past_log["is_success"].isin(success_values)]
-                    past_log = past_log.sort_values("created_at", ascending=False)
-
-                    if past_log.empty:
-                        st.info(
-                            "今の状況に近い成功ログは、まだありません。\n\n"
-                            "今回の記録を保存すると、次回以降の参考ログとして活用できます。"
+                    with st.spinner(
+                        "AIが対応のヒントを整理しています。"
+                        "回答が表示されるまで、そのままお待ちください。"
+                    ):
+                        ai_advice = generate_ai_advice(
+                            ai_input_data
                         )
-                    else:
-                        st.write(f"参考にできる成功ログが {len(past_log)} 件あります。最大3件まで表示します。")
 
-                        for _, row in past_log.head(3).iterrows():
-                            st.markdown("---")
-                            st.write("日時：", row["created_at"])
-                            st.write("状態：", row["seen_status"])
-                            st.write("困りごと：", row["support_category"])
-                            st.write("対応例：", row["action"])
-                            st.write("その時の負担感：", row["mental_load"])
+                    st.session_state["ai_advice_text"] = ai_advice
 
-            if st.session_state["ai_advice_source"] == "basic_fallback":
-                st.caption("※OpenAI APIが利用できない場合は、基本の対応例を表示しています。")
+            if st.session_state["ai_advice_requested"] and st.session_state["ai_advice_text"] != "":
 
-    else:
-        st.warning("AIからのヒントを表示するには、先にStep3で困りごとのカテゴリを選んでください。")
+                st.markdown(
+                    """
+                    <div style="
+                        border: 1px solid #86efac;
+                        border-radius: 14px;
+                        padding: 14px 16px;
+                        margin: 16px 0 8px 0;
+                        background-color: #f0fdf4;
+                        color: #374151;
+                    ">
+                        <b>🤖 AIからのヒント</b><br>
+                        この対応例は、支援者が次の行動を考えるためのヒントです。
+                        医療的判断や診断ではありません。
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                st.markdown(st.session_state["ai_advice_text"])
+
+                # ------------------------------
+                # AI対応例のあとに、過去の成功ログを表示する
+                # AIの提案を判断するための参考材料として使う
+                # ------------------------------
+                if st.session_state["condition"] == "ログあり":
+
+                    with st.expander("過去の成功ログを参考にする", expanded=False):
+
+                        st.info(
+                            "ここでは、今の状況に近い過去の成功ログを表示します。\n\n"
+                            "AIからのヒントだけで判断するのではなく、"
+                            "過去にうまくいった対応も参考にしながら、今回の対応を考えてください。\n\n"
+                            "記録が増えるほど、一人ひとりに合った支援のヒントが増えていきます。"
+                        )
+
+                        past_log = conn.read(worksheet="supporter_log", ttl=0)
+                        past_log = pd.DataFrame(past_log)
+
+                        past_log["participant_id"] = past_log["participant_id"].astype(str).str.strip()
+                        past_log["seen_status"] = past_log["seen_status"].astype(str).str.strip()
+                        past_log["support_category"] = past_log["support_category"].astype(str).str.strip()
+                        past_log["is_success"] = past_log["is_success"].astype(str).str.strip()
+
+                        past_log = past_log[past_log["participant_id"] == st.session_state["participant_id"]]
+                        past_log = past_log[past_log["seen_status"] == status]
+                        past_log = past_log[past_log["support_category"] == support_category]
+
+                        success_values = [
+                            "うまくいったと思う",
+                            "少しうまくいったと思う"
+                        ]
+
+                        past_log = past_log[past_log["is_success"].isin(success_values)]
+                        past_log = past_log.sort_values("created_at", ascending=False)
+
+                        if past_log.empty:
+                            st.info(
+                                "今の状況に近い成功ログは、まだありません。\n\n"
+                                "今回の記録を保存すると、次回以降の参考ログとして活用できます。"
+                            )
+                        else:
+                            st.write(f"参考にできる成功ログが {len(past_log)} 件あります。最大3件まで表示します。")
+
+                            for _, row in past_log.head(3).iterrows():
+                                st.markdown("---")
+                                st.write("日時：", row["created_at"])
+                                st.write("状態：", row["seen_status"])
+                                st.write("困りごと：", row["support_category"])
+                                st.write("対応例：", row["action"])
+                                st.write("その時の負担感：", row["mental_load"])
+
+                if st.session_state["ai_advice_source"] == "basic_fallback":
+                    st.caption("※OpenAI APIが利用できない場合は、基本の対応例を表示しています。")
+
+        else:
+            st.warning("AIからのヒントを表示するには、先にStep3で困りごとのカテゴリを選んでください。")
 
 # --- ここまで ---
 # ------------------------------
+# 「今すぐヒント」画面は、ここで終了する
+# ------------------------------
+if st.session_state["current_screen"] == "hint":
+
+    st.markdown("---")
+
+    st.caption(
+        "対応後の内容を残したい場合は、"
+        "下のボタンから記録画面へ進めます。"
+    )
+
+    if st.button(
+    "📝 この内容を記録に残す",
+    use_container_width=True
+):
+
+        # 記録画面へ進む前に、必須項目を確認する
+        if location == "選択してください":
+            st.error("先にStep1で場所を選択してください")
+            st.stop()
+
+        if supporter == "選択してください":
+            st.error("先にStep1であなたの立場を選択してください")
+            st.stop()
+
+        if event_timing == "選択してください":
+            st.error("先にStep2で支援場面の時期を選択してください")
+            st.stop()
+
+        if status == "選択してください":
+            st.error("先にStep2で支援を受ける方の状態を選択してください")
+            st.stop()
+
+        if support_category == "選択してください":
+            st.error("先にStep3で困りごとのカテゴリを選択してください")
+            st.stop()
+
+        # 必須項目がそろっている場合だけ、記録画面へ進む
+        st.session_state["current_screen"] = "record"
+        st.session_state["record_from_hint"] = True
+        st.session_state["scroll_to_record"] = True
+        st.rerun()
+
+    # 「今すぐヒント」では、Step5以降を表示しない
+    st.stop()
+
+#記録画面の入り口によって、表示するStep番号を変える
+if st.session_state["record_from_hint"]:
+    action_step = 5
+    review_step = 6
+    save_step = 7
+else:
+    action_step = 3
+    review_step = 4
+    save_step = 5
+
+
 # Step5：対応内容の記録
 # 実際の対応、または自分ならどう対応するかを書くカード
 # ------------------------------
 with st.container(border=True, key="step4_card"):
 
-    st.markdown("### 📝 Step5：対応内容の記録")
+    st.markdown(f"### 📝 Step{action_step}：対応内容の記録")
     st.caption("AI支援ナビや対応のヒントを参考にして、この場面での対応内容を記録してください。")
 
     st.markdown(
@@ -1649,13 +2001,43 @@ with st.container(border=True, key="step4_card"):
         key="action_text"
     )
 
+# ヒント画面から記録へ進んだ直後だけ、
+# Step5の先頭が見える位置へ画面を移動する
+if st.session_state["scroll_to_record"]:
+
+    components.html(
+    """
+    <script>
+    setTimeout(() => {
+        const target =
+            window.parent.document.querySelector(
+                '.st-key-step4_card'
+            );
+
+        if (target) {
+            target.style.scrollMarginTop = '120px';
+
+            target.scrollIntoView({
+                behavior: 'auto',
+                block: 'start'
+            });
+        }
+    }, 100);
+    </script>
+    """,
+    height=0
+)
+
+    # 次の操作では勝手にStep5へ戻らないようにする
+    st.session_state["scroll_to_record"] = False
+
        # ------------------------------
 # Step6：不安・負担感・対応結果
 # 評価項目を入力するカード
 # ------------------------------
 with st.container(border=True, key="step5_card"):
 
-    st.markdown("### 📊 Step6：振り返り")
+    st.markdown(f"### 📊 Step{review_step}：振り返り")
     st.caption("この場面で対応を考えたときの、不安や負担感、対応結果を振り返ってみてください。")
 
     st.markdown(
@@ -1807,7 +2189,7 @@ with st.container(border=True, key="step5_card"):
 # ------------------------------
 with st.container(border=True, key="step7_card"):
 
-    st.markdown("### 💾 Step7：入力内容を保存")
+    st.markdown(f"### 💾 Step{save_step}：入力内容を保存")
     st.caption("ここまで入力した内容を確認し、最後に保存してください。")
 
     st.markdown(
