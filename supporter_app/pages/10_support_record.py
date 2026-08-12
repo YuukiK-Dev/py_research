@@ -496,7 +496,10 @@ if st.session_state["current_screen"] == "history":
 # ------------------------------
 # 入力画面からホームへ戻るボタン
 # ------------------------------
-if st.session_state["current_screen"] in ["hint", "record"]:
+if (
+    st.session_state["current_screen"] in ["hint", "record"]
+    and not st.session_state["record_saved"]
+):
 
     if st.button(
         "⬅️ ホーム画面へ戻る",
@@ -958,8 +961,6 @@ if st.session_state["record_saved"]:
         "参考として蓄積されます。"
     )
 
-    st.markdown("### 次に行うことを選んでください")
-
     if st.button(
         "🏠 ホーム画面へ戻る",
         use_container_width=True
@@ -967,40 +968,6 @@ if st.session_state["record_saved"]:
         st.session_state["record_saved"] = False
         st.session_state["current_screen"] = "home"
         st.rerun()
-
-    if st.button(
-        "📝 直近5件から相談用要約を作る",
-        use_container_width=True
-    ):
-        st.session_state["summary_requested"] = True
-        st.rerun()
-
-    if st.button(
-        "➕ 続けて支援記録を入力する",
-        use_container_width=True
-    ):
-        st.session_state["record_saved"] = False
-        st.session_state["summary_requested"] = False
-
-        #前回作成した相談用要約を空にする
-        st.session_state["summary_text"] = ""
-        st.session_state["summary_error_message"] = ""
-
-        st.session_state["support_category"] = "選択してください"
-        st.session_state["action_text"] = ""
-        st.session_state["ai_advice_requested"] = False
-        st.session_state["ai_advice_text"] = ""
-        st.session_state["ai_advice_source"] = ""
-        st.session_state["ai_error_message"] = ""
-
-        # 新しい記録の入力時間を計測し直す
-        st.session_state["start_time"] = time.time()
-
-        st.rerun()
-
-    st.caption(
-        "操作を終了する場合は、この画面を閉じていただいて大丈夫です。"
-    )
 
     # 保存完了画面より下にある入力画面は表示しない
     st.stop()
