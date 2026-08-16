@@ -434,30 +434,30 @@ if st.session_state["current_screen"] == "home":
     # 2段目のボタン
     col_history, col_summary = st.columns(2)
 
-    with col_history:
-        if st.button(
-            "📚 過去の記録",
-            use_container_width=True
-        ):
-            # 過去の記録画面を表示する状態にする
-            st.session_state["current_screen"] = "history"
+    # with col_history:
+    #     if st.button(
+    #         "📚 過去の記録",
+    #         use_container_width=True
+    #     ):
+    #         # 過去の記録画面を表示する状態にする
+    #         st.session_state["current_screen"] = "history"
 
-            st.rerun()
+    #         st.rerun()
 
-    with col_summary:
-        if st.button(
-            "📄 相談メモ",
-            use_container_width=True
-        ):
-            # 既存の相談用要約画面を利用する
-            st.session_state["current_screen"] = "summary"
-            st.session_state["summary_requested"] = True
+    # with col_summary:
+    #     if st.button(
+    #         "📄 相談メモ",
+    #         use_container_width=True
+    #     ):
+    #         # 既存の相談用要約画面を利用する
+    #         st.session_state["current_screen"] = "summary"
+    #         st.session_state["summary_requested"] = True
 
-            # 前回の相談メモをいったん空にする
-            st.session_state["summary_text"] = ""
-            st.session_state["summary_error_message"] = ""
+    #         # 前回の相談メモをいったん空にする
+    #         st.session_state["summary_text"] = ""
+    #         st.session_state["summary_error_message"] = ""
 
-            st.rerun()
+    #         st.rerun()
 
     st.info(
         "💡 対応に迷っているときは「今すぐヒント」、"
@@ -1819,7 +1819,7 @@ if st.session_state["current_screen"] == "hint":
                 # AI対応例のあとに、過去の成功ログを表示する
                 # AIの提案を判断するための参考材料として使う
                 # ------------------------------
-                if st.session_state["condition"] == "ログあり":
+                if st.session_state["condition"] != "":
 
                     with st.expander("過去の成功ログを参考にする", expanded=False):
 
@@ -1950,7 +1950,7 @@ with st.container(border=True, key="step4_card"):
             color: #374151;
         ">
             <b>ここで入力すること</b><br>
-            実際に行った対応、または自分ならどう対応するかを短く書きます。
+            実際に行った対応、またはこれから行おうと考えている対応を短く書きます。
             完璧な文章でなくても大丈夫です。
         </div>
         """,
@@ -1960,8 +1960,14 @@ with st.container(border=True, key="step4_card"):
     # 支援者自身が疲れている場合は、対応内容を無理に書かせない
     if support_category == "支援者自身が疲れている":
         action_label = "[任意]今の自分にできそうなこと、または記録しておきたいことを書いてください（空欄でも大丈夫です）"
+
+    #「今すぐヒント」から記録画面へ進んだ場合
+    elif st.session_state["record_from_hint"]:
+        action_label = "[必須]この場面で、どのように対応しましたか？　または、どのように対応をしようと考えていますか？"
+
+    #ホームから直接「記録を残す」を選んだ場合
     else:
-        action_label = "[必須]この場面で、どのように対応しますか？"
+        action_label = "[必須]この場面で、どのように対応しましたか？"
 
     action = st.text_area(
         action_label,
@@ -2037,7 +2043,14 @@ with st.container(border=True, key="step5_card"):
         ]
     )
 
-    hesitation = ""
+    hesitation = st.radio(
+        "[必須]この場面で、どのように対応するか迷いましたか？",
+        [
+            "選択してください",
+            "はい",
+            "いいえ"
+        ]
+    )
 
     consult_need = st.radio(
         "この場面について、誰かに相談したいと思いましたか？",
@@ -2212,6 +2225,10 @@ with st.container(border=True, key="step7_card"):
 
         if anxiety == "選択してください":
             st.error("対応を考える不安を選択してください")
+            st.stop()
+
+        if hesitation == "選択してください":
+            st.error("対応について迷ったかを選択してください")
             st.stop()
 
         if mental_load == "選択してください":
