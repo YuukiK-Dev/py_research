@@ -1026,25 +1026,25 @@ if st.session_state["current_screen"] == "hint":
             """
         )
 
-        st.markdown(
-            """
-            <div style="
-                border: 1px solid #bae6fd;
-                border-radius: 14px;
-                padding: 12px 14px;
-                margin: 12px 0 4px 0;
-                background-color: #f0f9ff;
-                color: #374151;
-            ">
-                <b>入力の流れ</b><br>
-                Step1：基本情報<br>
-                Step2：支援場面の状況<br>
-                Step3：困りごとを選ぶ<br>
-                Step4：AIからのヒントを確認
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        # st.markdown(
+        #     """
+        #     <div style="
+        #         border: 1px solid #bae6fd;
+        #         border-radius: 14px;
+        #         padding: 12px 14px;
+        #         margin: 12px 0 4px 0;
+        #         background-color: #f0f9ff;
+        #         color: #374151;
+        #     ">
+        #         <b>入力の流れ</b><br>
+        #         Step1：基本情報<br>
+        #         Step2：支援場面の状況<br>
+        #         Step3：困りごとを選ぶ<br>
+        #         Step4：AIからのヒントを確認
+        #     </div>
+        #     """,
+        #     unsafe_allow_html=True
+        # )
 
 # ------------------------------
 # 記録画面：最初の案内
