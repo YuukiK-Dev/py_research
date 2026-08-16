@@ -1813,7 +1813,12 @@ if st.session_state["current_screen"] == "hint":
                     unsafe_allow_html=True
                 )
 
+                st.info(
+                        "💡 対応方法を確認したい場合は、「2. 支援者がすぐに取れる対応のヒント」をご覧ください。"
+                )
+
                 st.markdown(st.session_state["ai_advice_text"])
+
 
                 # ------------------------------
                 # AI対応例のあとに、過去の成功ログを表示する
