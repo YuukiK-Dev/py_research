@@ -159,6 +159,10 @@ if "ai_advice_source" not in st.session_state:
 if "ai_error_message" not in st.session_state:
     st.session_state["ai_error_message"] = ""
 
+# 過去ログで、どの結果を表示するか覚えておく箱
+if "past_log_view" not in st.session_state:
+    st.session_state["past_log_view"] = ""
+
 #保存が完了したかを覚えて億箱
 if "record_saved" not in st.session_state:
     st.session_state["record_saved"] = False
@@ -382,6 +386,7 @@ if st.session_state["current_screen"] == "home":
             st.session_state["ai_advice_text"] = ""
             st.session_state["ai_advice_source"] = ""
             st.session_state["ai_error_message"] = ""
+            st.session_state["past_log_view"] = ""
 
             # 今回は新しい記録なので初期状態に戻す
             st.session_state["record_saved"] = False
@@ -1826,14 +1831,33 @@ if st.session_state["current_screen"] == "hint":
                 # ------------------------------
                 if st.session_state["condition"] != "":
 
-                    with st.expander("過去の成功ログを参考にする", expanded=False):
+                    with st.expander("📚 過去の対応記録を参考にする", expanded=False):
 
                         st.info(
-                            "ここでは、今の状況に近い過去の成功ログを表示します。\n\n"
-                            "AIからのヒントだけで判断するのではなく、"
-                            "過去にうまくいった対応も参考にしながら、今回の対応を考えてください。\n\n"
-                            "記録が増えるほど、一人ひとりに合った支援のヒントが増えていきます。"
+                            "ここでは、今の状況に近い過去の対応記録を振り返ることができます。\n\n"
+                            "うまくいった対応だけでなく、結果がはっきりしなかった対応や、"
+                            "うまくいかなかった対応も、今回の対応を考えるための参考として確認できます。\n\n"
+                            "過去の記録は答えを決めるものではなく、"
+                            "今回の状況に合わせて対応を考えるための手がかりとして利用してください。"
                         )
+
+                        if st.button(
+                            "✅ うまくいった対応を見る",
+                            use_container_width=True
+                        ):
+                            st.session_state["past_log_view"] = "success"
+
+                        if st.button(
+                            "➖ 結果がはっきりしなかった対応を見る",
+                            use_container_width=True
+                        ):
+                            st.session_state["past_log_view"] = "neutral"
+
+                        if st.button(
+                            "⚠️ うまくいかなかった対応を見る",
+                            use_container_width=True
+                        ):
+                            st.session_state["past_log_view"] = "failure"
 
                         past_log = conn.read(worksheet="supporter_log", ttl=0)
                         past_log = pd.DataFrame(past_log)
@@ -1847,29 +1871,53 @@ if st.session_state["current_screen"] == "hint":
                         past_log = past_log[past_log["seen_status"] == status]
                         past_log = past_log[past_log["support_category"] == support_category]
 
-                        success_values = [
-                            "うまくいったと思う",
-                            "少しうまくいったと思う"
-                        ]
+                        if st.session_state["past_log_view"] == "success":
 
-                        past_log = past_log[past_log["is_success"].isin(success_values)]
+                            target_values = [
+                                "うまくいったと思う",
+                                "少しうまくいったと思う"
+                            ]
+                            view_label = "うまくいった対応"
+
+                        elif st.session_state["past_log_view"] == "neutral":
+                            target_values = [
+                                "どちらともいえない"
+                            ]
+                            view_label = "結果がはっきりしなかった対応"
+
+                        elif st.session_state["past_log_view"] == "failure":
+                            target_values = [
+                                "あまりうまくいかなかったと思う",
+                                "うまくいかなかったと思う"
+                            ]
+                            view_label = "うまくいかなかった対応"
+
+                        else:
+                            target_values = []
+                            view_label = ""
+
+                        past_log = past_log[past_log["is_success"].isin(target_values)]
                         past_log = past_log.sort_values("created_at", ascending=False)
 
-                        if past_log.empty:
-                            st.info(
-                                "今の状況に近い成功ログは、まだありません。\n\n"
-                                "今回の記録を保存すると、次回以降の参考ログとして活用できます。"
-                            )
-                        else:
-                            st.write(f"参考にできる成功ログが {len(past_log)} 件あります。最大3件まで表示します。")
+                        if st.session_state["past_log_view"] !="":
+                            if past_log.empty:
+                                st.info(
+                                    "今の状況に近い「{view_label}」の記録は、まだありません。\n\n"
+                                    "今回の記録を保存すると、次回以降の参考ログとして活用できます。"
+                                )
+                            else:
+                                st.write(
+                                        f"参考にできる「{view_label}」が {len(past_log)} 件あります。"
+                                        "最大3件まで表示します。"
+                                )
 
-                            for _, row in past_log.head(3).iterrows():
-                                st.markdown("---")
-                                st.write("日時：", row["created_at"])
-                                st.write("状態：", row["seen_status"])
-                                st.write("困りごと：", row["support_category"])
-                                st.write("対応例：", row["action"])
-                                st.write("その時の負担感：", row["mental_load"])
+                                for _, row in past_log.head(3).iterrows():
+                                    st.markdown("---")
+                                    st.write("日時：", row["created_at"])
+                                    st.write("状態：", row["seen_status"])
+                                    st.write("困りごと：", row["support_category"])
+                                    st.write("そのときの対応：", row["action"])
+                                    st.write("その時の負担感：", row["mental_load"])
 
                 if st.session_state["ai_advice_source"] == "basic_fallback":
                     st.caption("※OpenAI APIが利用できない場合は、基本の対応例を表示しています。")
