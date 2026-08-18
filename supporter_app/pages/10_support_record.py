@@ -1902,7 +1902,7 @@ if st.session_state["current_screen"] == "hint":
                         if st.session_state["past_log_view"] !="":
                             if past_log.empty:
                                 st.info(
-                                    "今の状況に近い「{view_label}」の記録は、まだありません。\n\n"
+                                    f"今の状況に近い「{view_label}」の記録は、まだありません。\n\n"
                                     "今回の記録を保存すると、次回以降の参考ログとして活用できます。"
                                 )
                             else:
