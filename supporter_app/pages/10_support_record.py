@@ -122,6 +122,10 @@ if "location" not in st.session_state:
 if "supporter" not in st.session_state:
     st.session_state["supporter"] = "選択してください"
 
+# userシートに登録された支援者の立場を覚えておく箱
+if "supporter_role" not in st.session_state:
+    st.session_state["supporter_role"] = ""
+
 # 支援場面の時期を覚えておく箱
 if "event_timing" not in st.session_state:
     st.session_state["event_timing"] = "選択してください"
@@ -246,7 +250,8 @@ if not st.session_state["is_logged_in"]:
                 st.session_state["users_df"] = conn.read(worksheet="users", ttl=600)
 
         users_df = st.session_state["users_df"]
-            
+
+                  
     except Exception:
         # 読み込みに失敗したら、ここで止める
         st.error("Google Sheets の読み込みに失敗しました")
@@ -321,17 +326,14 @@ if not st.session_state["is_logged_in"]:
 
             st.session_state["start_time"] = time.time()
 
-            # ログイン成功状態にする
-            st.session_state["is_logged_in"] = True
-            st.session_state["login_success_message"] = True
-            
-
-            # ログインしたIDを保存する
-            st.session_state["participant_id"] = input_id
-
             # usersシートのcondition列から、この人の条件を取り出す
             condition = matched_user.iloc[0]["condition"]
 
+            #usersシートのsupporter_role列から、この人の立場を取り出す
+            supporter_role = matched_user.iloc[0].get(
+                "supporter_role",
+                ""
+            )
             # conditionが空なら、この先に進ませない
             if str(condition).strip() == "":
                 st.error("このIDは現在使用できません。管理者へ連絡してください")
@@ -340,6 +342,20 @@ if not st.session_state["is_logged_in"]:
             # あとで保存時に使えるように、session_stateに覚えておく
             # 前後の空白を消して、ログあり/ログなし判定を安定させる
             st.session_state["condition"] = str(condition).strip()
+
+            #ログインした利用者の立場もsession_stateに覚えておく
+            st.session_state["supporter_role"] = (
+                ""
+                if pd.isna(supporter_role)
+                else str(supporter_role).strip()
+            )
+
+            #必要な情報を取得で来てから、ログイン成功状態ににする
+            st.session_state["participant_id"] = input_id
+            st.session_state["start_time"] = time.time()
+            st.session_state["is_logged_in"] = True
+            st.session_state["login_success_message"] = True
+                        
 
             # ログイン情報を保存できましたので、画面を再度読み込みしてstep1へ進む
             st.rerun()
@@ -375,7 +391,11 @@ if st.session_state["current_screen"] == "home":
         ):
             # 新しい支援場面を始めるため、前回の入力内容を初期化する
             st.session_state["location"] = "選択してください"
-            st.session_state["supporter"] = "選択してください"
+            st.session_state["supporter"] = (
+                st.session_state["supporter_role"]
+                if st.session_state["supporter_role"] != "" 
+                else "選択してください"
+            )
             st.session_state["event_timing"] = "選択してください"
             st.session_state["situation_detail"] = ""
             st.session_state["status"] = "選択してください"
@@ -407,7 +427,11 @@ if st.session_state["current_screen"] == "home":
         ):
             # 新しい記録を始めるため、前回の入力内容を初期化する
             st.session_state["location"] = "選択してください"
-            st.session_state["supporter"] = "選択してください"
+            st.session_state["supporter"] = (
+                st.session_state["supporter_role"]
+                if st.session_state["supporter_role"] != ""
+                else "選択してください"
+            )
             st.session_state["event_timing"] = "選択してください"
             st.session_state["situation_detail"] = ""
             st.session_state["status"] = "選択してください"
@@ -1166,7 +1190,15 @@ if not (
             )
 
         with col_supporter:
-            supporter = st.radio(
+            if st.session_state["supporter_role"] != "":
+                supporter = st.session_state["supporter_role"]
+
+                st.markdown(
+                    f"👤 あなたの立場：**{supporter}**"
+                )
+
+            else:
+                supporter = st.radio(
                 "👤 [必須]あなたの立場を選んでください",
                 [
                     "選択してください",
@@ -1178,6 +1210,49 @@ if not (
                 key="supporter"
             )
 
+                # 初回に立場を選んだ場合だけusersシートへ保存する
+                if supporter != "選択してください":
+                    # 保存する直前に、最新のusersシートを読み込む
+                    users_df_for_update = conn.read(
+                        worksheet="users",
+                        ttl=0
+                    )
+
+                    #保存する直前に、最新のusersシートを読み込む
+                    users_df_for_update = conn.read(
+                        worksheet="users",
+                        ttl=0
+                    )
+
+                    users_df_for_update = pd.DataFrame(
+                        users_df_for_update
+                    )
+                    
+                    #今ログインんしている利用者の行を探す
+                    target_user = (
+                        users_df_for_update["participant_id"]
+                        .astype(str)
+                        .str.strip()
+                        == st.session_state["participant_id"]
+                    )
+
+                    #その利用者のsupporter_roleに、選んだ立場を入れる
+                    users_df_for_update.loc[
+                        target_user,
+                        "supporter_role"
+                    ] = supporter
+
+                    #usersシートへ保存する
+                    conn.update(
+                        worksheet="users",
+                        data=users_df_for_update
+                    )
+
+                    #更新後のusers出たーも覚えなおす
+                    st.session_state["users_df"] = users_df_for_update
+
+                    #このログイン中にも使えるように覚える
+                    st.session_state["supporter_role"] = supporter
 
 
 # ------------------------------
@@ -1917,6 +1992,7 @@ if st.session_state["current_screen"] == "hint":
                                     st.write("状態：", row["seen_status"])
                                     st.write("困りごと：", row["support_category"])
                                     st.write("そのときの対応：", row["action"])
+                                    st.write("対応後の様子：",row["person_response"])
                                     st.write("その時の負担感：", row["mental_load"])
 
                 if st.session_state["ai_advice_source"] == "basic_fallback":
