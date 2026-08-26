@@ -1137,7 +1137,7 @@ if not (
                 color: #6b7280;
                 margin-top: 6px;
             ">
-                まず、今回の支援場面について、場所とあなたの立場を選んでください。
+                まず、今回の支援場面について、場所とご本人との関係を選んでください。
             </div>
         </div>
         """,
@@ -1155,7 +1155,7 @@ if not (
                 color: #374151;
             ">
                 <b>ここで入力すること</b><br>
-                どこで、どの立場で支援している場面なのかを記録します。
+                どこで、どのような関係で支援している場面なのかを記録します。
             </div>
             """,
             unsafe_allow_html=True
@@ -1181,17 +1181,16 @@ if not (
                 supporter = st.session_state["supporter_role"]
 
                 st.markdown(
-                    f"👤 あなたの立場：**{supporter}**"
+                    f"👤 ご本人との関係：**{supporter}**"
                 )
 
             else:
                 supporter = st.radio(
-                "👤 [必須]あなたの立場を選んでください",
+                "👤 [必須]ご本人との関係を選んでください",
                 [
                     "選択してください",
-                    "家族",
-                    "支援員",
-                    "教員",
+                    "父",
+                    "母",
                     "その他"
                 ],
                 key="supporter"
@@ -1577,7 +1576,7 @@ def build_ai_prompt(ai_input_data):
 
 [入力情報]
 ・場所 : {place}
-・支援者の立場 : {supporter_role}
+・支援者の立場・関係 : {supporter_role}
 ・現在の状態 : {current_state}
 ・困りごとのカテゴリ : {support_category}
 
@@ -1818,7 +1817,7 @@ if st.session_state["current_screen"] == "hint":
 
                 st.info(
                 f"場所 : {location}\n\n"
-                f"支援者の立場 : {supporter}\n\n"
+                f"支援者の立場・関係 : {supporter}\n\n"
                 f"現在の状態 : {status}\n\n"
                 f"困りごとのカテゴリ : {support_category}\n\n"
                 )
@@ -1838,7 +1837,7 @@ if st.session_state["current_screen"] == "hint":
                     st.stop()
 
                 if supporter == "選択してください":
-                    st.error("先にStep1であなたの立場を選択してください")
+                    st.error("先にStep1でご本人との関係を選択してください")
                     st.stop()
 
                 if status == "選択してください":
@@ -2049,7 +2048,7 @@ if st.session_state["current_screen"] == "hint":
             st.stop()
 
         if supporter == "選択してください":
-            st.error("先にStep1であなたの立場を選択してください")
+            st.error("先にStep1でご本人との関係を選択してください")
             st.stop()
 
         if event_timing == "選択してください":
@@ -2303,7 +2302,7 @@ with st.container(border=True, key="step7_card"):
             st.stop()
 
         if supporter == "選択してください":
-            st.error("あなたの立場を選択してください")
+            st.error("ご本人との関係を選択してください")
             st.stop()
         
         if event_timing == "選択してください":
