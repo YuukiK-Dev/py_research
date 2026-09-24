@@ -6,6 +6,7 @@ __pycache__/
 # Streamlit
 .streamlit/secrets.toml
 supporter_app/.streamlit/secrets.toml
+staff_app/.streamlit/secrets.toml
 
 # OS
 .DS_Store
