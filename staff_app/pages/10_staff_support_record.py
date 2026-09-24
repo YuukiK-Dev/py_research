@@ -570,6 +570,9 @@ if st.session_state["current_screen"] == "home":
             st.session_state["summary_text"] = ""
             st.session_state["summary_error_message"] = ""
 
+            # ホームｋら開いた場合は、前回選んだ記録をリセットする
+            st.session_state["summary_selected_record_id"] = ""
+
             st.rerun()
 
     st.info(
@@ -975,7 +978,7 @@ if st.session_state["summary_requested"]:
 
             st.session_state[
                 "summary_selected_record_id"
-            ] = "選択してください"
+            ] = record_options[1]
 
         # 引き継ぎ用の記録IDを空に戻す
         st.session_state["history_to_summary_record_id"] = ""
@@ -995,7 +998,7 @@ if st.session_state["summary_requested"]:
 
         #選んだ記録が変わったら、前の相談メモを消す
         if st.session_state.get("last_selected_record_id") != selected_record_id:
-
+            
             st.session_state["summary_text"] = ""
             st.session_state["summary_error_message"] = ""
 
