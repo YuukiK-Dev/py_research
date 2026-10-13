@@ -95,7 +95,48 @@ SHOW_AI_DEBUG = False
 # 基本の対応例を画面に表示するかどうかを切り替える設定
 # True : API未接続・開発中は表示する
 # False : AI接続後・実証時は表示しない
-SHOW_BASIC_ADVICE = True
+SHOW_BASIC_ADVICE = False
+
+# 診断・障害区分の共通選択肢
+DIAGNOSIS_OPTIONS = [
+    "自閉スペクトラム症(ASD)",
+    "注意欠如・多動症(ADHD)",
+    "知的障害",
+    "学習障害(LD/SLD)",
+    "発達性協調運動症(DCD)",
+    "その他の発達障害"
+]
+
+# 特性の共通選択肢
+CHARACTERISTIC_OPTIONS = [
+    "多動・落ち着きにくい",
+    "衝動的になりやすい",
+    "集中が難しい・忘れやすい",
+    "強いこだわりがある",
+    "切り替えが苦手",
+    "感覚過敏",
+    "コミュニケーションが苦手",
+    "集団参加が苦手",
+    "学習が苦手",
+    "運動・手先が不器用"
+]
+
+# 支援場面の共通選択肢
+SITUATION_CATEGORY_OPTIONS = [
+    "外出・移動",
+    "予定変更・切り替え",
+    "こだわり",
+    "コミュニケーション",
+    "感情・パニック",
+    "集団参加・人間関係",
+    "学習・学校生活",
+    "食事",
+    "身の回り・生活習慣",
+    "感覚過敏・感覚刺激",
+    "危険行動・強い行動",
+    "その他"
+]
+
 
 
 # 開始時間をいれておく箱を用意する
@@ -150,16 +191,16 @@ if "ai_advice_requested" not in st.session_state:
 if "ai_advice_text" not in st.session_state:
     st.session_state["ai_advice_text"] = ""
 
-#対応内容の入力を覚えておく箱
+# 対応内容の入力を覚えておく箱
 if "action_text" not in st.session_state:
     st.session_state["action_text"] = ""
 
-#AI対応例がどこから作られたかを覚えておく箱
+# AI対応例がどこから作られたかを覚えておく箱
 #例 : openai / basic_fallback
 if "ai_advice_source" not in st.session_state:
     st.session_state["ai_advice_source"] = ""
 
-#AI生成に失敗したときの理由を一時保存しておく箱
+# AI生成に失敗したときの理由を一時保存しておく箱
 if "ai_error_message" not in st.session_state:
     st.session_state["ai_error_message"] = ""
 
@@ -167,13 +208,17 @@ if "ai_error_message" not in st.session_state:
 if "past_log_view" not in st.session_state:
     st.session_state["past_log_view"] = ""
 
-#過去ログを実際に参照したかを覚えておく箱
+# 過去ログを実際に参照したかを覚えておく箱
 if "past_log_used" not in st.session_state:
     st.session_state["past_log_used"] = False
 
-#保存が完了したかを覚えて億箱
+# 保存が完了したかを覚えておく箱
 if "record_saved" not in st.session_state:
     st.session_state["record_saved"] = False
+
+# 共有用支援記録を保存したか覚えておく箱
+if "share_record_saved" not in st.session_state:
+    st.session_state["share_record_saved"] = False
 
 
 #相談用要約画面へ進むかを覚えておく箱
@@ -194,6 +239,8 @@ if "summary_error_message" not in st.session_state:
 # record：記録を残す画面
 # history：過去の記録画面
 # summary：相談メモ画面
+# profile_edit : 基本情報変更画面
+
 if "current_screen" not in st.session_state:
     st.session_state["current_screen"] = "home"
 
@@ -243,7 +290,15 @@ if not st.session_state["is_logged_in"]:
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # ------------------------------
+# 共有支援記録用のGoogle Sheetsに接続する
+# experience_share / user_profile / variable　を使用する
 # ------------------------------
+share_conn = st.connection(
+    "gsheets_share",
+    type=GSheetsConnection
+)
+
+
 # users シートを読む
 # ログインしていないときだけ、本人確認用に読み込む
 # ------------------------------
@@ -255,7 +310,7 @@ if not st.session_state["is_logged_in"]:
 
         users_df = st.session_state["users_df"]
 
-                  
+
     except Exception:
         # 読み込みに失敗したら、ここで止める
         st.error("Google Sheets の読み込みに失敗しました")
@@ -300,15 +355,15 @@ if not st.session_state["is_logged_in"]:
             st.error("配付されたIDと配付されたパスワードの両方を入力してください")
             st.stop()
 
-        
 
-            
+
+
 
         # ------------------------------
         # ログイン後のヘッダー表示
         # ログイン後も、何のアプリか・何をする画面かが分かるようにする
         # ------------------------------
-       
+
 
         # --------------------------
         # usersシート側のデータも文字としてそろえる
@@ -335,6 +390,22 @@ if not st.session_state["is_logged_in"]:
         ]
 
         if not matched_user.empty:
+
+            # --------------------------
+            # このIDが現在使用可能か確認する
+            # is_active = 1　のIDだけログインできる
+            # --------------------------
+            is_active = matched_user.iloc[0].get(
+                "is_active",
+                0
+            )
+
+            if str(is_active).strip() not in ["1","1.0"]:
+                st.error(
+                    "このIDは現在使用できません。"
+                )
+                st.stop()
+
             # st.success("ログイン成功")
             # st.write("ログインID:", input_id)
 
@@ -368,8 +439,13 @@ if not st.session_state["is_logged_in"]:
             st.session_state["participant_id"] = input_id
             st.session_state["start_time"] = time.time()
             st.session_state["is_logged_in"] = True
+
+            # ログイン後は必ずホーム画面から開始する
+            st.session_state["current_screen"] = "home"
+
             st.session_state["login_success_message"] = True
-                        
+
+
 
             # ログイン情報を保存できましたので、画面を再度読み込みしてstep1へ進む
             st.rerun()
@@ -381,6 +457,1047 @@ if not st.session_state["is_logged_in"]:
 if not st.session_state["is_logged_in"]:
     st.info("配布されたIDとパスワードを入力して、ログインしてください")
     st.stop()
+
+# ------------------------------
+# 共有用 user_profile　シートを読み込む
+# ログイン中の利用者のプロフィールが登録済みか確認する
+# ------------------------------
+try:
+    user_profile_df = share_conn.read(
+        worksheet="user_profile",
+        ttl=0
+    )
+
+    user_profile_df = pd.DataFrame(user_profile_df)
+
+except Exception:
+    st.error("基本情報の読み込みに失敗しました")
+    st.stop()
+
+# participant_id を文字列としてそろえる
+if not user_profile_df.empty:
+    user_profile_df["participant_id"] = (
+        user_profile_df["participant_id"]
+        .astype(str)
+        .str.strip()
+    )
+
+# 今ログインしている利用者のプロフィールだけ探す
+current_user_profile = user_profile_df[
+    user_profile_df["participant_id"]
+    == st.session_state["participant_id"]
+]
+
+# プロフィール登録済みかを覚えておく
+st.session_state["has_user_profile"] = (
+    not current_user_profile.empty
+)
+
+# ------------------------------
+# 初回プロフィール登録
+# user_profile に基本情報がない場合だけ表示する
+# ------------------------------
+if not st.session_state["has_user_profile"]:
+
+    st.title("AI支援ナビ")
+    st.subheader("👤 支援を受ける方の基本情報")
+
+    st.info(
+        "今後、似た支援記録を探しやすくするために、"
+        "支援を受ける方の基本情報を登録します。\n\n"
+        "一度登録すると、次回から自動で反映されます。"
+        "誕生日や進級などで変更がある場合は、いつでも修正できます。\n\n"
+        "※年齢や学年は、他の利用者にはそのまま表示せず、"
+        "「小学校低学年」など個人が特定されにくい形で表示します。"
+    )
+
+    # ------------------------------
+    # 年齢
+    # ------------------------------
+    age = st.selectbox(
+        "🎂 [必須] 年齢を選んでください",
+        ["選択してください"] + list(range(1, 31))
+    )
+
+    # ------------------------------
+    # 学年
+    # ------------------------------
+    school_grade = st.selectbox(
+        "🏫 [必須] 学年を選んでください",
+        [
+            "選択してください",
+            "未就学",
+            "小学1年生",
+            "小学2年生",
+            "小学3年生",
+            "小学4年生",
+            "小学5年生",
+            "小学6年生",
+            "中学1年生",
+            "中学2年生",
+            "中学3年生",
+            "高校1年生",
+            "高校2年生",
+            "高校3年生",
+            "高校卒業後・成人"
+        ]
+    )
+
+    # ------------------------------
+    # 性別
+    # ------------------------------
+    gender = st.radio(
+        "👤 [必須] 性別を選んでください",
+        [
+            "男",
+            "女",
+            "回答しない"
+        ],
+        index=None
+    )
+
+    # ------------------------------
+    # 診断・障害区分
+    # ------------------------------
+    diagnosis = st.multiselect(
+        "🩺 [必須] 診断・障害区分を選んでください（複数選択可）",
+        DIAGNOSIS_OPTIONS
+    )
+
+    # ------------------------------
+    # 特性
+    # ------------------------------
+    characteristics = st.multiselect(
+        "🌱 [必須] 現在みられる特性を選んでください（複数選択可）",
+        CHARACTERISTIC_OPTIONS
+    )
+
+    # ------------------------------
+    # 基本情報を保存する
+    # ------------------------------
+    if st.button(
+        "💾 基本情報を保存する",
+        use_container_width=True
+    ):
+
+        # ------------------------------
+        # 必須項目の確認
+        # ------------------------------
+        if age == "選択してください":
+            st.error("年齢を選択してください")
+            st.stop()
+
+        if school_grade == "選択してください":
+            st.error("学年を選択してください")
+            st.stop()
+
+        if gender is None:
+            st.error("性別を選択してください")
+            st.stop()
+
+        if len(diagnosis) == 0:
+            st.error("診断・障害区分を1つ以上選択してください")
+            st.stop()
+
+        if len(characteristics) == 0:
+            st.error("特性を1つ以上選択してください")
+            st.stop()
+
+        # ------------------------------
+        # 学年から発達段階を自動で決める
+        # ------------------------------
+        development_stage_map = {
+            "未就学": "未就学",
+            "小学1年生": "小学校低学年",
+            "小学2年生": "小学校低学年",
+            "小学3年生": "小学校中学年",
+            "小学4年生": "小学校中学年",
+            "小学5年生": "小学校高学年",
+            "小学6年生": "小学校高学年",
+            "中学1年生": "中学生",
+            "中学2年生": "中学生",
+            "中学3年生": "中学生",
+            "高校1年生": "高校生",
+            "高校2年生": "高校生",
+            "高校3年生": "高校生",
+            "高校卒業後・成人": "成人"
+        }
+
+        development_stage = development_stage_map[
+            school_grade
+        ]
+
+        # ------------------------------
+        # 更新日時
+        # ------------------------------
+        now = pd.Timestamp.now(
+            tz="Asia/Tokyo"
+        ).strftime("%Y-%m-%d %H:%M:%S")
+
+        # ------------------------------
+        # 今回保存するプロフィールを1行作る
+        # ------------------------------
+        new_profile = pd.DataFrame([{
+            "participant_id": st.session_state["participant_id"],
+            "age": age,
+            "school_grade": school_grade,
+            "development_stage": development_stage,
+            "gender": gender,
+            "diagnosis": " | ".join(diagnosis),
+            "characteristics": " | ".join(characteristics),
+            "updated_at": now
+        }])
+
+        # ------------------------------
+        # 既存プロフィールに今回の1行を追加する
+        # ------------------------------
+        updated_profile_df = pd.concat(
+            [
+                user_profile_df,
+                new_profile
+            ],
+            ignore_index=True
+        )
+
+        # ------------------------------
+        # user_profile シートへ保存する
+        # ------------------------------
+        share_conn.update(
+            worksheet="user_profile",
+            data=updated_profile_df
+        )
+
+        # プロフィール登録済みとして覚える
+        st.session_state["has_user_profile"] = True
+
+        # 保存後、画面を再読み込みする
+        st.rerun()
+
+    # 基本情報を登録するまではホーム画面を表示しない
+    st.stop()
+
+
+# ------------------------------
+# 登録済みプロフィールを読み込む
+# 次回以降の入力で自動反映できるように、
+# session_state に基本情報を覚えておく
+# ------------------------------
+if st.session_state["has_user_profile"]:
+
+    # 今ログインしている利用者のプロフィール1行を取り出す
+    profile_row = current_user_profile.iloc[0]
+
+    # 年齢
+    if (
+        pd.notna(profile_row["age"])
+        and str(profile_row["age"]).strip() != ""
+    ):
+        st.session_state["profile_age"] = int(
+            float(profile_row["age"])
+        )
+    else:
+        st.session_state["profile_age"] = None
+
+    # 学年
+    st.session_state["profile_school_grade"] = (
+        ""
+        if pd.isna(profile_row["school_grade"])
+        else str(profile_row["school_grade"]).strip()
+    )
+
+    # 発達段階
+    st.session_state["profile_development_stage"] = (
+        ""
+        if pd.isna(profile_row["development_stage"])
+        else str(profile_row["development_stage"]).strip()
+    )
+
+    # 性別
+    st.session_state["profile_gender"] = (
+        ""
+        if pd.isna(profile_row["gender"])
+        else str(profile_row["gender"]).strip()
+    )
+
+    # 診断・障害区分
+    diagnosis_text = (
+        ""
+        if pd.isna(profile_row["diagnosis"])
+        else str(profile_row["diagnosis"]).strip()
+    )
+
+    st.session_state["profile_diagnosis"] = [
+        item.strip()
+        for item in diagnosis_text.split("|")
+        if item.strip() != ""
+    ]
+
+    # 特性
+    characteristics_text = (
+        ""
+        if pd.isna(profile_row["characteristics"])
+        else str(profile_row["characteristics"]).strip()
+    )
+
+    st.session_state["profile_characteristics"] = [
+        item.strip()
+        for item in characteristics_text.split("|")
+        if item.strip() != ""
+    ]
+# ------------------------------
+# 共有用の文章を匿名化する関数
+# ------------------------------
+def anonymize_text_for_share(text):
+
+    # 空欄なら、AIを呼ばずに空欄を返す
+    if text is None or str(text).strip() == "":
+        return ""
+
+    client = OpenAI(
+        api_key=st.secrets["OPENAI_API_KEY"]
+    )
+
+    anonymize_prompt = f"""
+あなたは、支援記録を他の利用者へ共有する前に、
+個人が特定されにくい文章へ加工する補助者です。
+
+以下の文章について、
+支援内容の意味をできるだけ変えずに、
+個人や所属先を特定する可能性のある情報を一般化してください。
+
+【例】
+・人名 → 「本人」「家族」「支援者」
+・学校名 → 「学校」
+・施設名 → 「施設」
+・病院名 → 「医療機関」
+・会社名 → 「勤務先」
+・具体的な住所や地域名 → 一般的な表現
+・電話番号、メールアドレス、ID → 削除
+
+【必ず守ること】
+・元の文章にない情報を追加しない
+・支援方法や結果を評価しない
+・診断や原因を推測しない
+・個人特定と関係のない内容はできるだけ残す
+・すでに個人特定情報がない場合は、必要以上に書き換えない
+・説明や前置きを付けず、加工後の文章だけを返す
+
+【加工する文章】
+{text}
+"""
+
+    response = client.responses.create(
+        model="gpt-5.5-2026-04-23",
+        input=anonymize_prompt,
+        store=False
+    )
+
+    anonymized_text = response.output_text
+
+    if anonymized_text is None or anonymized_text.strip() == "":
+        raise ValueError(
+            "匿名化された文章が返されませんでした"
+        )
+
+    return anonymized_text.strip()
+
+# ------------------------------
+# 基本情報変更画面
+# ------------------------------
+if st.session_state["current_screen"] == "profile_edit":
+
+    st.title("AI支援ナビ")
+    st.subheader("⚙️ 基本情報を変更する")
+
+    st.info(
+        "現在登録されている基本情報を変更できます。\n\n"
+        "誕生日や進級、特性の変化などがあった場合に修正してください。"
+    )
+
+    # ------------------------------
+    # 選択肢
+    # ------------------------------
+    age_options = list(range(1, 31))
+
+    school_grade_options = [
+        "未就学",
+        "小学1年生",
+        "小学2年生",
+        "小学3年生",
+        "小学4年生",
+        "小学5年生",
+        "小学6年生",
+        "中学1年生",
+        "中学2年生",
+        "中学3年生",
+        "高校1年生",
+        "高校2年生",
+        "高校3年生",
+        "高校卒業後・成人"
+    ]
+
+    gender_options = [
+        "男",
+        "女",
+        "回答しない"
+    ]
+
+    diagnosis_options = DIAGNOSIS_OPTIONS
+
+
+    characteristics_options =  CHARACTERISTIC_OPTIONS
+
+    # ------------------------------
+    # 現在の値を初期値として表示
+    # ------------------------------
+    edit_age = st.selectbox(
+        "🎂 年齢",
+        age_options,
+        index=age_options.index(
+            st.session_state["profile_age"]
+        )
+    )
+
+    edit_school_grade = st.selectbox(
+        "🏫 学年",
+        school_grade_options,
+        index=school_grade_options.index(
+            st.session_state["profile_school_grade"]
+        )
+    )
+
+    edit_gender = st.radio(
+        "👤 性別",
+        gender_options,
+        index=gender_options.index(
+            st.session_state["profile_gender"]
+        )
+    )
+
+    edit_diagnosis = st.multiselect(
+        "🩺 診断・障害区分（複数選択可）",
+        diagnosis_options,
+        default=st.session_state["profile_diagnosis"]
+    )
+
+    edit_characteristics = st.multiselect(
+        "🌱 現在みられる特性（複数選択可）",
+        characteristics_options,
+        default=st.session_state["profile_characteristics"]
+    )
+
+    # ------------------------------
+    # 変更内容を保存
+    # ------------------------------
+    if st.button(
+        "💾 変更内容を保存する",
+        use_container_width=True
+    ):
+
+        if len(edit_diagnosis) == 0:
+            st.error("診断・障害区分を1つ以上選択してください")
+            st.stop()
+
+        if len(edit_characteristics) == 0:
+            st.error("特性を1つ以上選択してください")
+            st.stop()
+
+        development_stage_map = {
+            "未就学": "未就学",
+            "小学1年生": "小学校低学年",
+            "小学2年生": "小学校低学年",
+            "小学3年生": "小学校中学年",
+            "小学4年生": "小学校中学年",
+            "小学5年生": "小学校高学年",
+            "小学6年生": "小学校高学年",
+            "中学1年生": "中学生",
+            "中学2年生": "中学生",
+            "中学3年生": "中学生",
+            "高校1年生": "高校生",
+            "高校2年生": "高校生",
+            "高校3年生": "高校生",
+            "高校卒業後・成人": "成人"
+        }
+
+        edit_development_stage = development_stage_map[
+            edit_school_grade
+        ]
+
+        now = pd.Timestamp.now(
+            tz="Asia/Tokyo"
+        ).strftime("%Y-%m-%d %H:%M:%S")
+
+        # 今ログインしている利用者の行を探す
+        target_profile = (
+            user_profile_df["participant_id"]
+            .astype(str)
+            .str.strip()
+            == st.session_state["participant_id"]
+        )
+
+        # 該当する行を更新
+        user_profile_df.loc[
+            target_profile,
+            "age"
+        ] = edit_age
+
+        user_profile_df.loc[
+            target_profile,
+            "school_grade"
+        ] = edit_school_grade
+
+        user_profile_df.loc[
+            target_profile,
+            "development_stage"
+        ] = edit_development_stage
+
+        user_profile_df.loc[
+            target_profile,
+            "gender"
+        ] = edit_gender
+
+        user_profile_df.loc[
+            target_profile,
+            "diagnosis"
+        ] = " | ".join(edit_diagnosis)
+
+        user_profile_df.loc[
+            target_profile,
+            "characteristics"
+        ] = " | ".join(edit_characteristics)
+
+        user_profile_df.loc[
+            target_profile,
+            "updated_at"
+        ] = now
+
+        # Google Sheetsへ上書き
+        share_conn.update(
+            worksheet="user_profile",
+            data=user_profile_df
+        )
+
+        # ホームへ戻す
+        st.session_state["current_screen"] = "home"
+        st.rerun()
+
+
+    # ------------------------------
+    # 変更せずホームへ戻る
+    # ------------------------------
+    if st.button(
+        "⬅️ ホーム画面へ戻る",
+        use_container_width=True
+    ):
+        st.session_state["current_screen"] = "home"
+        st.rerun()
+
+    # この下にある他の画面を表示しない
+    st.stop()
+
+# ------------------------------
+# 共有用支援記録の保存完了画面
+# ------------------------------
+if (
+    st.session_state["current_screen"] == "share_record"
+    and st.session_state["share_record_saved"]
+):
+
+    st.title("AI支援ナビ")
+    st.subheader("✅ 支援記録を保存しました")
+
+    st.success(
+        "今回の支援記録を保存しました。"
+    )
+
+    if st.button(
+        "🏠 ホーム画面へ戻る",
+        use_container_width=True
+    ):
+        st.session_state["share_record_saved"] = False
+        st.session_state["current_screen"] = "home"
+        st.rerun()
+
+    st.stop()
+
+
+# ------------------------------
+# 共有用の支援記録登録画面
+# ------------------------------
+if st.session_state["current_screen"] == "share_record":
+
+    st.title("AI支援ナビ")
+    st.subheader("🔗 支援記録を共有する")
+
+    st.info(
+        "他の利用者の参考になるように、"
+        "支援した場面や対応、その結果を記録します"
+    )
+
+    situation_category = st.selectbox(
+        "📌 [必須] どのような場面でしたか？",
+        ["選択してください"] + SITUATION_CATEGORY_OPTIONS
+    )
+
+    st.info(
+        "⚠️ 氏名、学校名、施設名、住所など、"
+        "本人やご家族が特定される情報は入力しないでください。"
+    )
+
+    situation_detail = st.text_area(
+        "📝 [必須] そのとき、何が起きていましたか？",
+        placeholder="例：予定が急に変わり、大きな声を出していました",
+        height=100
+    )
+
+    action = st.text_area(
+        "🤝 [必須] そのとき、どのように対応しましたか？",
+        placeholder="例：予定の変更内容を紙に書いて、次にすることを1つずつ伝えました",
+        height=100
+    )
+
+    result = st.text_area(
+        "🌱 [必須] 対応したあと、どのようになりましたか？",
+        placeholder="例：少し落ち着き、次の予定を確認できました",
+        height=100
+    )
+
+    memo = st.text_area(
+        "💡 [任意]この体験から、ほかの方に伝えたいことがあれば入力してください",
+        placeholder="例：予定変更は口頭だけでなく、見える形で伝えると分かりやすそうでした",
+        height=100
+    )
+
+    reference_source = st.text_input(
+        "📚 [任意] 参考にした助言、本・Webサイト・資料などがあれば入力してください",
+        placeholder="例：○○支援センターの資料、○○という本"
+    )
+
+    st.caption(
+        "「はい」を選ぶと、個人が特定されないように加工したうえで、"
+        "他の利用者の参考情報として表示されます。  \n"
+        "「いいえ」を選んだ場合は、記録は保存されますが他の利用者には表示されません。"
+    )
+
+    share_consent = st.radio(
+        "🔗 [必須] この支援記録を、個人が特定されないように加工したうえで他の利用者と共有しますか？",
+        [
+            "はい",
+            "いいえ"
+        ],
+        index=None
+    )
+
+    if st.button(
+        "💾 支援記録を保存する",
+        use_container_width=True
+    ):
+        if situation_category == "選択してください":
+            st.error(
+                "どのような場面だったかを選択してください"
+            )
+            st.stop()
+
+        if situation_detail.strip() == "":
+            st.error(
+                "そのとき何がおきていたかを入力してください"
+            )
+            st.stop()
+
+        if action.strip() == "":
+            st.error(
+                "そのとき、どのように対応したかを入力してください"
+            )
+            st.stop()
+
+        if result.strip() == "":
+            st.error(
+                "対応したあと、どのようになったかを入力してください"
+            )
+            st.stop()
+
+        if share_consent is None:
+            st.error(
+                "この支援記録を共有するかどうかを選択してください"
+            )
+            st.stop()
+
+        # 他の利用者へ共有する記録かどうか
+        should_share = share_consent == "はい"
+
+        # 公開用の文章は、最初は空欄にしておく
+        situation_detail_public = ""
+        action_public = ""
+        result_public = ""
+        memo_public = ""
+
+        # 「共有する」を選んだ場合だけ匿名化する
+        if should_share:
+
+            try:
+                with st.spinner(
+                    "共有用の文章を確認します..."
+                ):
+                    situation_detail_public = (
+                        anonymize_text_for_share(
+                            situation_detail
+                        )
+                    )
+
+                    action_public = (
+                        anonymize_text_for_share(
+                            action
+                        )
+                    )
+
+                    result_public = (
+                        anonymize_text_for_share(
+                            result
+                        )
+                    )
+
+                    memo_public = (
+                        anonymize_text_for_share(
+                            memo
+                        )
+                    )
+
+            except Exception:
+                st.error(
+                    "共有用の文章を作成できませんでした。"
+                    "時間をおいて、もう一度お試しください"
+                )
+                st.stop()
+
+
+        # ------------------------------
+        # 保存日時を作る
+        # ------------------------------
+        now = pd.Timestamp.now(
+            tz="Asia/Tokyo"
+        ).strftime("%Y-%m-%d %H:%M:%S")
+
+        # ------------------------------
+        # 支援記録ごとのIDを作る
+        # ------------------------------
+        experience_id = (
+            "E"
+            + str(pd.Timestamp.now().timestamp()).replace(".", "")
+        )
+
+        # ------------------------------
+        # 今回保存する1件分のデータを作る
+        # ------------------------------
+        new_experience = pd.DataFrame([{
+            "experience_id": experience_id,
+            "created_at": now,
+            "participant_id": st.session_state["participant_id"],
+
+            "age": st.session_state["profile_age"],
+            "school_grade": st.session_state["profile_school_grade"],
+            "development_stage": st.session_state["profile_development_stage"],
+            "gender": st.session_state["profile_gender"],
+
+            "diagnosis": " | ".join(
+                st.session_state["profile_diagnosis"]
+            ),
+
+            "characteristics": " | ".join(
+                st.session_state["profile_characteristics"]
+            ),
+
+            "situation_category": situation_category,
+            "situation_detail": situation_detail.strip(),
+            "situation_detail_public": situation_detail_public,
+
+            "action": action.strip(),
+            "action_public": action_public,
+
+            "result": result.strip(),
+            "result_public": result_public,
+
+            "memo": memo.strip(),
+            "memo_public": memo_public,
+
+            "reference_source": reference_source.strip(),
+            "share_consent": share_consent
+        }])
+
+        # ------------------------------
+        # experience_share シートを読み込む
+        # ------------------------------
+        old_experience = share_conn.read(
+            worksheet="experience_share",
+            ttl=0
+        )
+
+        old_experience = pd.DataFrame(
+            old_experience
+        )
+
+        # ------------------------------
+        # 既存データの末尾に今回の1件を追加する
+        # ------------------------------
+        updated_experience = pd.concat(
+            [
+                old_experience,
+                new_experience
+            ],
+            ignore_index=True
+        )
+
+
+
+        # ------------------------------
+        # experience_share シートへ保存する
+        # ------------------------------
+        share_conn.update(
+            worksheet="experience_share",
+            data=updated_experience
+        )
+
+        st.session_state["share_record_saved"] = True
+
+        st.rerun()
+
+
+
+    if st.button(
+        "⬅️ ホーム画面へ戻る",
+        use_container_width=True
+    ):
+        st.session_state["current_screen"] = "home"
+        st.rerun()
+
+    st.stop()
+
+# ------------------------------
+# 他の方の支援記録を見る画面
+# ------------------------------
+if st.session_state["current_screen"] == "share_search":
+
+    st.title("AI支援ナビ")
+    st.subheader("🔍 他の方の支援記録を見る")
+
+    st.info(
+        "他の利用者が共有に同意した支援記録から、"
+        "似た場面や対応を探すことができます。"
+    )
+
+    # experience_share シートを読み込む
+    share_records = share_conn.read(
+        worksheet="experience_share",
+        ttl=0
+    )
+
+    # DataFrameとして扱える形にそろえる
+    share_records = pd.DataFrame(
+        share_records
+    )
+
+    # 共有に同意した記録だけを取り出す
+    if not share_records.empty:
+
+        share_records["share_consent"] = (
+            share_records["share_consent"]
+            .astype(str)
+            .str.strip()
+        )
+
+        public_records = share_records[
+            share_records["share_consent"] == "はい"
+        ]
+
+    else:
+        public_records = pd.DataFrame()
+
+    # 自分以外の利用者が登録した記録だけを取り出す
+    if not public_records.empty:
+
+        other_records = public_records[
+            public_records["participant_id"]
+            .astype(str)
+            .str.strip()
+            != str(
+                st.session_state["participant_id"]
+            ).strip()
+        ]
+    else:
+        other_records = pd.DataFrame()
+
+    st.write(
+        f"現在参照できる共有記録 : {len(other_records)}件"
+    )
+
+    # ------------------
+    # 場面で検索する
+    # ------------------
+    search_category = st.selectbox(
+        "📌 場面で絞り込む",
+        ["すべて"] + SITUATION_CATEGORY_OPTIONS,
+        key="share_search_category"
+    )
+
+    search_stage = st.selectbox(
+        "🌱 発達段階で絞り込む",
+        [
+            "すべて",
+            "未就学",
+            "小学校低学年",
+            "小学校中学年",
+            "小学校高学年",
+            "中学生",
+            "高校生",
+            "成人"
+        ],
+        key="share_search_stage"
+    )
+
+    search_diagnosis = st.selectbox(
+        "🩺 診断・障害区分で絞り込む",
+        ["すべて"] + DIAGNOSIS_OPTIONS,
+        key="share_search_diagnosis"
+    )
+
+    search_gender = st.selectbox(
+        "👤 性別で絞り込む",
+        [
+            "すべて",
+            "男",
+            "女"
+        ],
+        key="share_search_gender"
+    )
+
+    search_characteristic = st.selectbox(
+        "🌿 特性で絞り込む",
+        ["すべて"] + CHARACTERISTIC_OPTIONS,
+        key="share_search_characteristic"
+    )
+
+    # まずは他の方の記録を全部対象にする
+    filtered_records = other_records.copy()
+
+    # 「すべて」以外が選ばれた場合だけ絞り込む
+    if search_category != "すべて":
+
+        filtered_records = filtered_records[
+            filtered_records["situation_category"]
+            == search_category
+        ]
+
+    if search_stage != "すべて":
+
+        filtered_records = filtered_records[
+            filtered_records["development_stage"]
+            == search_stage
+        ]
+
+    if search_diagnosis != "すべて":
+
+        filtered_records = filtered_records[
+            filtered_records["diagnosis"]
+            .astype(str)
+            .str.contains(
+                search_diagnosis,
+                regex=False,
+                na=False
+            )
+        ]
+
+    if search_gender != "すべて":
+
+        filtered_records = filtered_records[
+            filtered_records["gender"] == search_gender
+        ]
+
+    if search_characteristic != "すべて":
+
+        filtered_records = filtered_records[
+            filtered_records["characteristics"]
+            .astype(str)
+            .str.contains(
+                search_characteristic,
+                regex=False,
+                na=False
+            )
+        ]
+
+    # 他の方の共有記録を1件だけ表示して確認する
+    if filtered_records.empty:
+
+        st.info(
+            "検索条件に合う支援記録はまだありません。\n\n"
+            "条件を少なくしたり変更したりして、もう一度検索してください。"
+        )
+
+    else:
+
+        st.write(
+            f"検索結果 : {len(filtered_records)}件"
+        )
+
+        for _, record in filtered_records.iterrows():
+
+            st.markdown("---")
+            st.markdown("### 📖 支援記録")
+
+            st.write(
+                "発達段階：",
+                record["development_stage"]
+            )
+
+            st.write(
+                "場面：",
+                record["situation_category"]
+            )
+
+            st.write(
+                "何が起きていたか：",
+                record["situation_detail_public"]
+            )
+
+            action_public_text = (
+                "未入力"
+                if pd.isna(record["action_public"])
+                or str(record["action_public"]).strip() == ""
+                else str(record["action_public"]).strip()
+            )
+
+            st.write(
+                "対応：",
+                action_public_text
+            )
+
+            result_public_text = (
+                "未入力"
+                if pd.isna(record["result_public"])
+                or str(record["result_public"]).strip() == ""
+                else str(record["result_public"]).strip()
+            )
+            st.write(
+                "結果：",
+                result_public_text
+            )
+
+            if (
+                pd.notna(record["memo_public"])
+                and str(record["memo_public"]).strip() != ""
+            ):
+                st.write(
+                    "参考になること：",
+                    record["memo_public"]
+                )
+
+    if st.button(
+        "⬅️ ホーム画面へ戻る",
+        use_container_width=True
+    ):
+        st.session_state["current_screen"] = "home"
+        st.rerun()
+
+    st.stop()
+
 
 # ------------------------------
 # ログイン後のホーム画面
@@ -407,7 +1524,7 @@ if st.session_state["current_screen"] == "home":
             st.session_state["location"] = "選択してください"
             st.session_state["supporter"] = (
                 st.session_state["supporter_role"]
-                if st.session_state["supporter_role"] != "" 
+                if st.session_state["supporter_role"] != ""
                 else "選択してください"
             )
             st.session_state["event_timing"] = "選択してください"
@@ -426,7 +1543,7 @@ if st.session_state["current_screen"] == "home":
             # 今回は新しい記録なので初期状態に戻す
             st.session_state["record_saved"] = False
             st.session_state["record_from_hint"] = False
-            
+
             # ヒント画面を表示する状態にする
             st.session_state["current_screen"] = "hint"
 
@@ -437,9 +1554,10 @@ if st.session_state["current_screen"] == "home":
 
     with col_record:
         if st.button(
-            "📝 記録を残す",
+            "📝 自分の記録を残す",
             use_container_width=True
         ):
+
             # 新しい記録を始めるため、前回の入力内容を初期化する
             st.session_state["location"] = "選択してください"
             st.session_state["supporter"] = (
@@ -467,7 +1585,7 @@ if st.session_state["current_screen"] == "home":
             st.session_state["record_saved"] = False
             st.session_state["record_from_hint"] = False
 
-            
+
             # 記録画面を表示する状態にする
             st.session_state["current_screen"] = "record"
             st.session_state["record_from_hint"] = False
@@ -476,6 +1594,45 @@ if st.session_state["current_screen"] == "home":
             st.session_state["start_time"] = time.time()
 
             st.rerun()
+
+        st.caption(
+            "自分で振り返るための記録です。 \n\n"
+            "AIヒントを使いたい場合は「今すぐヒント」を選択してください。"
+        )
+
+    # ------------------------------
+    # 共有用の支援記録を登録する
+    # ------------------------------
+    if st.button(
+        "🔗 支援記録を共有する",
+        use_container_width=True
+    ):
+        st.session_state["current_screen"] = "share_record"
+        st.rerun()
+
+    st.caption(
+        "他の利用者の参考になる支援記録を共有します。 \n\n"
+        "この画面では、対応を考えるためのAIからのヒントは使用しません。"
+    )
+
+     # ------------------------------
+     # 共有用の支援記録を登録する
+     # ------------------------------
+    if st.button(
+        "🔍 他の方の支援記録を見る",
+        use_container_width=True
+    ):
+
+        # 前回の検索条件を初期化する
+        st.session_state["share_search_category"] = "すべて"
+        st.session_state["share_search_stage"] = "すべて"
+        st.session_state["share_search_diagnosis"] = "すべて"
+        st.session_state["share_search_characteristic"] = "すべて"
+        st.session_state["share_search_gender"] = "すべて"
+
+        # 検索画面へ移動する
+        st.session_state["current_screen"] = "share_search"
+        st.rerun()
 
     # 2段目のボタン
     col_history, col_summary = st.columns(2)
@@ -505,9 +1662,21 @@ if st.session_state["current_screen"] == "home":
 
     #         st.rerun()
 
+    # ------------------------
+    # 基本情報を変更する
+    # ------------------------
+    if st.button(
+        "⚙️ 基本情報を変更する",
+        use_container_width=True
+    ):
+        st.session_state["current_screen"] = "profile_edit"
+        st.rerun()
+
     st.info(
         "💡 対応に迷っているときは「今すぐヒント」、"
-        "対応後の内容を残したいときは「記録を残す」を選んでください。"
+        "自分で振り返る内容を残したいときは「自分の記録を残す」を選んでください。\n\n"
+        "他の利用者の参考になる記録を共有したいときは、"
+        "「支援記録を共有する」を選んでください。"
     )
 
     # ホーム画面より下にある入力画面を表示しない
@@ -674,7 +1843,7 @@ if st.session_state["summary_requested"]:
         worksheet="supporter_log",
         ttl=0
     )
-    
+
     #読み込んだデータをDataFrameにそろえる
     summary_log = pd.DataFrame(summary_log)
 
@@ -730,7 +1899,7 @@ if st.session_state["summary_requested"]:
             logs_for_ai.iterrows(),
             start=1
         ):
-            
+
                     # 1件分の基本情報を、1行ずつリストに入れる
             record_lines = [
                 f"【記録{record_number}】",
@@ -781,7 +1950,7 @@ if st.session_state["summary_requested"]:
                     f"相談したいと思ったか："
                     f"{str(row['consult_need']).strip()}"
                 )
-            
+
             # 相談相手が具体的に選ばれている場合だけ追加する
             if (
                 pd.notna(row["consult_who"])
@@ -867,7 +2036,7 @@ if st.session_state["summary_requested"]:
                     st.session_state[
                         "summary_error_message"
                     ] = str(e)
-                                
+
         #要約作成時のエラーが残っている場合に案内する
         if st.session_state["summary_error_message"] != "":
             st.error(
@@ -962,8 +2131,8 @@ if st.session_state["summary_requested"]:
     #現段階では、読み込み後にここで処理を止める
     st.stop()
 
-    
-    
+
+
 if st.session_state["record_saved"]:
     st.title("AI支援ナビ")
     st.subheader("✅ 記録を保存しました")
@@ -984,7 +2153,7 @@ if st.session_state["record_saved"]:
     # 保存完了画面より下にある入力画面は表示しない
     st.stop()
 
-    
+
 
     # --- ここから Day2（location入力） ---
 
@@ -1072,11 +2241,11 @@ if (
 ):
     with st.container(border=True):
 
-        st.markdown("#### 📝 支援場面を記録します")
+        st.markdown("#### 📝 自分の記録を残します")
 
         st.markdown(
             """
-            対応が終わったあとに、今回の状況や対応内容を残しておく画面です。
+            今回の状況や対応した内容・これから対応しようと考えている内容を残しておく画面です。
 
             記録しておくことで、あとから振り返ったり、
             過去の記録や相談メモに活用したりできます。
@@ -1213,7 +2382,7 @@ if not (
                     users_df_for_update = pd.DataFrame(
                         users_df_for_update
                     )
-                    
+
                     #今ログインんしている利用者の行を探す
                     target_user = (
                         users_df_for_update["participant_id"]
@@ -1257,7 +2426,7 @@ if not (
                 "この場面がいつ頃の出来事かと、そのときの状態を選んでください。"
             )
 
-        
+
             event_timing = st.radio(
                 "[必須]支援場面は、いつ頃の出来事ですか？",
                 [
@@ -1356,14 +2525,14 @@ if not (
 # 困りごとのカテゴリを選ぶカード
 # ------------------------------
 if st.session_state["current_screen"] == "hint":
-    
+
     with st.container(border=True, key="step3_card"):
 
         st.markdown("### 🤖 Step3：AI支援ナビ")
         st.caption(
             "AIが答えを決めるのではなく、"
-            "AIの提案と過去の成功ログを参考にしながら、"
-            "支援者が次の対応を考えるためのステップです。"               
+            "AIの提案と過去の対応記録を参考にしながら、"
+            "支援者が次の対応を考えるためのステップです。"
         )
 
         st.markdown(
@@ -1379,8 +2548,8 @@ if st.session_state["current_screen"] == "hint":
                 <b>ここで行うこと</b><br>
                 ①今の困りごとを選びます。<br>
                 ②AIからのヒントを確認します。<br>
-                ③過去の成功ログも参考にしながら、今回の対応を考えます。<br><br>
-            
+                ③過去の対応記録も参考にしながら、今回の対応を考えます。<br><br>
+
                 AIは答えを決めるものではありません。
                 支援者が自分で判断するための手がかりを整理します。
             </div>
@@ -1435,11 +2604,10 @@ if st.session_state["current_screen"] == "hint":
     support_category = st.session_state["support_category"]
 
     if (
-        support_category != "選択してください" 
-        and SHOW_BASIC_ADVICE
+        support_category != "選択してください"
         and st.session_state["current_screen"] == "hint"
     ):
-        
+
         st.markdown(
             f"""
             <div style="
@@ -1457,7 +2625,7 @@ if st.session_state["current_screen"] == "hint":
                     {support_category}
                 </div>
                 <div style="font-size: 14px; color: #374151; margin-top: 6px;">
-                    この内容に合わせて、対応例とAIのヒントを表示します。
+                    この内容に合わせて、AIのヒントを表示します。
                 </div>
             </div>
             """,
@@ -1465,7 +2633,7 @@ if st.session_state["current_screen"] == "hint":
         )
 
     if (
-        support_category != "選択してください" 
+        support_category != "選択してください"
         and SHOW_BASIC_ADVICE
         and st.session_state["current_screen"] == "hint"
     ):
@@ -1475,7 +2643,7 @@ if st.session_state["current_screen"] == "hint":
         if support_category == "声かけに迷う":
             st.info(
                 "💬 声かけに迷うとき\n\n"
-                "・短い言葉で声をかける\n\n" 
+                "・短い言葉で声をかける\n\n"
                 "・一度に多く説明しない\n\n"
                 "・相手の反応を待つ"
             )
@@ -1485,7 +2653,7 @@ if st.session_state["current_screen"] == "hint":
                 "🌊 感情が高ぶっているとき\n\n"
                 "・自分の安全を確認する\n\n"
                 "・無理に説得しない\n\n"
-                "・落ち着ける場所や時間を確保する\n\n" 
+                "・落ち着ける場所や時間を確保する\n\n"
                 "・好きな物などを見せる"
             )
 
@@ -1520,7 +2688,7 @@ if st.session_state["current_screen"] == "hint":
                 "ここまで対応しようとしていること自体が、大切な支援です。\n\n"
                 "今すぐ完璧に対応しようとせず、まずは支援者自身の負担を少し軽くする方法を考えてみてください。"
             )
-            
+
             st.markdown("#### 🫧 支援者自身のための選択肢")
             st.caption("※今の自分に対して、良いと思う事を選んで確認してください")
 
@@ -1554,7 +2722,7 @@ if st.session_state["current_screen"] == "hint":
                     "今すぐ相談できない場合は、あとで振り返れるように、状況を短く残しておくことも役立ちます。\n\n"
                     "「何が起きたか」「自分が困ったこと」「次に相談したいこと」を簡単に記録しておくと、後で共有しやすくなります。"
                     )
-        
+
     #AI支援ナビ：AIに渡す文章を作る関数
 
 def build_ai_prompt(ai_input_data):
@@ -1768,7 +2936,7 @@ def generate_ai_advice(ai_input_data):
 # ------------------------------
 if st.session_state["current_screen"] == "hint":
 
-    
+
     with st.container(border=True, key="step6_card"):
 
         st.markdown("### 🤖 Step4：AIからの対応ヒント")
@@ -2119,7 +3287,7 @@ with st.container(border=True, key="step4_card"):
 
     #ホームから直接「記録を残す」を選んだ場合
     else:
-        action_label = "[必須]この場面で、どのように対応しましたか？"
+        action_label = "[必須]この場面で、どのように対応しましたか？　または、どのように対応をしようと考えていますか？"
 
     action = st.text_area(
         action_label,
@@ -2194,34 +3362,53 @@ with st.container(border=True, key="step5_card"):
             "2:少し負担があった",
             "3:ある程度負担があった",
             "4:かなり負担があった",
-            "5:非常に負担が大きいかった"
+            "5:非常に負担が大きかった"
         ]
     )
 
-    is_success = st.radio(
-        "[必須]この場面での対応について、あなた自身はどのように感じましたか？",
+    action_status = st.radio(
+        "[必須]この場面では、すでに対応しましたか？",
         [
             "選択してください",
-            "うまくいったと思う",
-            "少しうまくいったと思う",
-            "どちらともいえない",
-            "あまりうまくいかなかったと思う",
-            "うまくいかなかったと思う"
+            "まだ対応していない",
+            "すでに対応した"
         ]
     )
 
-    st.caption(
-    "対応後の様子を記録しておくと、後から相談するときに、"
-    "対応による変化を伝えやすくなります。"
-    "相談用の要約を作るときにも役立ちます。"
-    "分からない場合や記入が難しい場合は、空欄でも大丈夫です。"
-    )
+    if action_status == "すでに対応した":
 
-    person_response = st.text_area(
-        "[任意]対応したあと、支援を受ける方の様子はどう変わりましたか？（一言でも大丈夫です）",
-        placeholder="例：少し落ち着き、こちらの話を聞けるようになりました",
-        height=80
-    )
+        is_success = st.radio(
+            "[必須]この場面での対応について、現在の状況に近いものを選んでください",
+            [
+                "選択してください",
+                "うまくいったと思う",
+                "少しうまくいったと思う",
+                "どちらともいえない",
+                "あまりうまくいかなかったと思う",
+                "うまくいかなかったと思う"
+            ]
+        )
+
+    else:
+        is_success = ""
+
+    if action_status == "すでに対応した":
+
+        st.caption(
+            "対応後の様子を記録しておくと、後から相談するときに、"
+            "対応による変化を伝えやすくなります。"
+            "相談用の要約を作るときにも役立ちます。"
+            "分からない場合や記入が難しい場合は、空欄でも大丈夫です。"
+        )
+
+        person_response = st.text_area(
+            "[任意]対応したあと、支援を受ける方の様子はどう変わりましたか？（一言でも大丈夫です）",
+            placeholder="例：少し落ち着き、こちらの話を聞けるようになりました",
+            height=80
+        )
+
+    else:
+        person_response = ""
 
     consult_need = st.radio(
             "この場面について、誰かに相談したいと思いましたか？",
@@ -2284,7 +3471,7 @@ with st.container(border=True, key="step7_card"):
         unsafe_allow_html=True
     )
 
-   
+
     if st.button("💾 保存する", use_container_width=True):
 
         #ログイン前・計測開始前なら保存させない
@@ -2304,7 +3491,7 @@ with st.container(border=True, key="step7_card"):
         if supporter == "選択してください":
             st.error("ご本人との関係を選択してください")
             st.stop()
-        
+
         if event_timing == "選択してください":
             st.error("支援場面がいつ頃の出来事かを選択してください")
             st.stop()
@@ -2321,8 +3508,19 @@ with st.container(border=True, key="step7_card"):
             st.error("心理的な負担を選択してください")
             st.stop()
 
-        if is_success == "選択してください":
-            st.error("対応結果を選択してください")
+        if action_status == "選択してください":
+            st.error(
+                "この場面ですでに対応したかどうかを選択してください"
+            )
+            st.stop()
+
+        if(
+            action_status == "すでに対応した"
+            and is_success == "選択してください"
+        ):
+            st.error(
+                "対応結果を選択してください"
+            )
             st.stop()
 
         #支援者自身が疲れている場合以外は、対応内容を必須にする
@@ -2342,15 +3540,24 @@ with st.container(border=True, key="step7_card"):
         #判断にかかった秒数 小数点2桁にする
         decision_time = round(time.time() - st.session_state["start_time"],2)
 
-        # 対応結果を分析しやすいように数値へ変換する
-        success_score_map = {
-            "うまくいったと思う": 5,
-            "少しうまくいったと思う": 4,
-            "どちらともいえない": 3,
-            "あまりうまくいかなかったと思う": 2,
-            "うまくいかなかったと思う": 1
-        }
-        is_success_score = success_score_map[is_success]
+
+        # 対応済みの場合だけ、対応結果を数値へ変換する
+        if action_status == "すでに対応した":
+
+            success_score_map = {
+                "うまくいったと思う": 5,
+                "少しうまくいったと思う": 4,
+                "どちらともいえない": 3,
+                "あまりうまくいかなかったと思う": 2,
+                "うまくいかなかったと思う": 1
+            }
+
+            is_success_score = success_score_map[
+                is_success
+            ]
+
+        else:
+            is_success_score = None
 
         #今回追加する1行を作る
         new_data = pd.DataFrame([{
@@ -2366,6 +3573,7 @@ with st.container(border=True, key="step7_card"):
             "ai_advice_source": st.session_state["ai_advice_source"],
             "ai_error_message": st.session_state["ai_error_message"],
             "action": action,
+            "action_status": action_status,
             "person_response": person_response.strip(),
             "memo": "",
             "consult_topic": consult_topic.strip(),
@@ -2378,7 +3586,7 @@ with st.container(border=True, key="step7_card"):
             "past_log_used": st.session_state["past_log_used"],
             "is_success": is_success,
             "is_success_score": is_success_score,
-        
+
             }])
 
         # 新しいデータを追加
