@@ -90,6 +90,7 @@ st.markdown(
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 import time
+import re
 SHOW_AI_DEBUG = False
 
 # 基本の対応例を画面に表示するかどうかを切り替える設定
@@ -744,6 +745,67 @@ if st.session_state["has_user_profile"]:
         for item in characteristics_text.split("|")
         if item.strip() != ""
     ]
+
+# ------------------------------
+# OpenAI APIへ送る前に、
+# 機械的に判定しやすい直接識別子を一次マスキングする
+# ------------------------------
+def mask_direct_identifiers(text):
+
+    # 空欄なら、そのまま空欄を返す
+    if text is None or str(text).strip() == "":
+        return ""
+
+    masked_text = str(text)
+
+    # メールアドレス
+    masked_text = re.sub(
+        r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
+        "[メールアドレス]",
+        masked_text
+    )
+
+    # URL
+    masked_text = re.sub(
+        r"https?://[^\s]+|www\.[^\s]+",
+        "[URL]",
+        masked_text
+    )
+
+    # 電話番号（ハイフンあり）
+    masked_text = re.sub(
+        r"(?<!\d)0\d{1,4}-\d{1,4}-\d{3,4}(?!\d)",
+        "[電話番号]",
+        masked_text
+    )
+
+    # 電話番号（ハイフンなし・10～11桁）
+    masked_text = re.sub(
+        r"(?<!\d)0\d{9,10}(?!\d)",
+        "[電話番号]",
+        masked_text
+    )
+
+    # 郵便番号
+    masked_text = re.sub(
+        r"〒?\s*\d{3}-\d{4}",
+        "[郵便番号]",
+        masked_text
+    )
+
+
+
+    # ID、学籍番号、社員番号など
+    masked_text = re.sub(
+        r"(?:ユーザーID|会員ID|学籍番号|社員番号|ID|id)"
+        r"\s*[:：]?\s*[A-Za-z0-9_-]{4,}",
+        "[ID]",
+        masked_text
+    )
+
+    return masked_text
+
+
 # ------------------------------
 # 共有用の文章を匿名化する関数
 # ------------------------------
@@ -752,6 +814,26 @@ def anonymize_text_for_share(text):
     # 空欄なら、AIを呼ばずに空欄を返す
     if text is None or str(text).strip() == "":
         return ""
+
+    # OpenAPIへ送る前に、直接識別子を一次マスキングする
+    masked_text = mask_direct_identifiers(text)
+
+    # 一次マスキング後に、置換記号以外の内容が残っているか確認する
+    text_without_placeholders = re.sub(
+        r"\[(電話番号|メールアドレス|郵便番号|URL|ID)\]",
+        "",
+        masked_text
+    )
+
+    # 空白や句読点だけなら、LLMで整理する必要がない
+    text_without_placeholders = re.sub(
+        r"[\s。、,，.・:：;；!?！？\-ー_（）()【】「」『』]+",
+        "",
+        text_without_placeholders
+    )
+
+    if text_without_placeholders == "":
+        return masked_text
 
     client = OpenAI(
         api_key=st.secrets["OPENAI_API_KEY"]
@@ -783,7 +865,7 @@ def anonymize_text_for_share(text):
 ・説明や前置きを付けず、加工後の文章だけを返す
 
 【加工する文章】
-{text}
+{masked_text}
 """
 
     response = client.responses.create(
@@ -800,6 +882,94 @@ def anonymize_text_for_share(text):
         )
 
     return anonymized_text.strip()
+
+# ------------------------------
+# 参考情報を共有用に加工する関数
+# 書名・著者名・出版社名などの公開情報はできるだけ残し、
+# 利用者や関係者の特定につながる情報は一般化する
+# ------------------------------
+def anonymize_reference_source_for_share(text):
+
+    # 空欄なら、AIを呼ばずに空欄を返す
+    if text is None or str(text).strip() == "":
+        return ""
+
+    # OpenAI APIへ送る前に、直接識別子を一次マスキングする
+    masked_text = mask_direct_identifiers(text)
+
+    # 一次マスキング後に、置換記号以外の内容が残っているか確認する
+    text_without_placeholders = re.sub(
+        r"\[(電話番号|メールアドレス|郵便番号|URL|ID)\]",
+        "",
+        masked_text
+    )
+
+    text_without_placeholders = re.sub(
+        r"[\s。、,，.・:：;；!?！？\-ー_（）()【】「」『』]+",
+        "",
+        text_without_placeholders
+    )
+
+    # 置換記号しか残っていない場合は、LLMを呼ばずそのまま返す
+    if text_without_placeholders == "":
+        return masked_text
+
+    client = OpenAI(
+        api_key=st.secrets["OPENAI_API_KEY"]
+    )
+
+    reference_prompt = f"""
+あなたは、支援記録に記載された参考情報を、
+他の利用者へ安全に共有できる形へ加工する補助者です。
+
+以下の文章について、
+参考情報として役立つ内容はできるだけ残しながら、
+利用者本人や関係者の特定につながる情報を一般化してください。
+
+【できるだけ残す情報】
+・本のタイトル
+・著者名
+・出版社名
+・一般公開されている資料名
+・参考情報として必要な内容
+
+【一般化する情報】
+・学校名 → 「学校」
+・施設名 → 「施設」または「支援施設」
+・病院名 → 「医療機関」
+・利用者本人や家族、支援者との関係から個人特定につながる人名
+・具体的な住所や地域名
+
+【削除する情報】
+・電話番号
+・メールアドレス
+・ID
+・その他の直接識別子
+
+【必ず守ること】
+・元の文章にない情報を追加しない
+・書名、著者名、出版社名は、個人特定と関係がなければ必要以上に変更しない
+・参考情報としての意味をできるだけ残す
+・説明や前置きを付けず、加工後の文章だけを返す
+
+【加工する文章】
+{masked_text}
+"""
+
+    response = client.responses.create(
+        model="gpt-5.5-2026-04-23",
+        input=reference_prompt,
+        store=False
+    )
+
+    reference_public = response.output_text
+
+    if reference_public is None or reference_public.strip() == "":
+        raise ValueError(
+            "共有用の参考情報が返されませんでした"
+        )
+
+    return reference_public.strip()
 
 # ------------------------------
 # 基本情報変更画面
@@ -1130,6 +1300,7 @@ if st.session_state["current_screen"] == "share_record":
         action_public = ""
         result_public = ""
         memo_public = ""
+        reference_source_public = ""
 
         # 「共有する」を選んだ場合だけ匿名化する
         if should_share:
@@ -1138,11 +1309,14 @@ if st.session_state["current_screen"] == "share_record":
                 with st.spinner(
                     "共有用の文章を確認します..."
                 ):
+
                     situation_detail_public = (
                         anonymize_text_for_share(
                             situation_detail
                         )
                     )
+
+
 
                     action_public = (
                         anonymize_text_for_share(
@@ -1150,15 +1324,23 @@ if st.session_state["current_screen"] == "share_record":
                         )
                     )
 
+
                     result_public = (
                         anonymize_text_for_share(
                             result
                         )
                     )
 
+
                     memo_public = (
                         anonymize_text_for_share(
                             memo
+                        )
+                    )
+
+                    reference_source_public = (
+                        anonymize_reference_source_for_share(
+                            reference_source
                         )
                     )
 
@@ -1167,6 +1349,7 @@ if st.session_state["current_screen"] == "share_record":
                     "共有用の文章を作成できませんでした。"
                     "時間をおいて、もう一度お試しください"
                 )
+
                 st.stop()
 
 
@@ -1186,7 +1369,8 @@ if st.session_state["current_screen"] == "share_record":
         )
 
         # ------------------------------
-        # 今回保存する1件分のデータを作る
+        # 共有用として保存する1件分のデータを作る
+        # 元の自由記述は保存せず、加工後の文章だけを入れる
         # ------------------------------
         new_experience = pd.DataFrame([{
             "experience_id": experience_id,
@@ -1207,54 +1391,108 @@ if st.session_state["current_screen"] == "share_record":
             ),
 
             "situation_category": situation_category,
-            "situation_detail": situation_detail.strip(),
+
             "situation_detail_public": situation_detail_public,
-
-            "action": action.strip(),
             "action_public": action_public,
-
-            "result": result.strip(),
             "result_public": result_public,
-
-            "memo": memo.strip(),
             "memo_public": memo_public,
 
+            "reference_source_public": reference_source_public,
+            "share_consent": share_consent
+        }])
+
+
+                # ------------------------------
+        # 元の入力内容を非公開の検証用シートへ保存する
+        # ------------------------------
+        new_private_experience = pd.DataFrame([{
+            "experience_id": experience_id,
+            "created_at": now,
+            "participant_id": st.session_state["participant_id"],
+
+            "age": st.session_state["profile_age"],
+            "school_grade": st.session_state["profile_school_grade"],
+            "development_stage": st.session_state["profile_development_stage"],
+            "gender": st.session_state["profile_gender"],
+
+            "diagnosis": " | ".join(
+                st.session_state["profile_diagnosis"]
+            ),
+
+            "characteristics": " | ".join(
+                st.session_state["profile_characteristics"]
+            ),
+
+            "situation_category": situation_category,
+            "situation_detail": situation_detail.strip(),
+            "action": action.strip(),
+            "result": result.strip(),
+            "memo": memo.strip(),
             "reference_source": reference_source.strip(),
             "share_consent": share_consent
         }])
 
         # ------------------------------
-        # experience_share シートを読み込む
+        # experience_private シートを読み込む
         # ------------------------------
-        old_experience = share_conn.read(
-            worksheet="experience_share",
+        old_private_experience = share_conn.read(
+            worksheet="experience_private",
             ttl=0
         )
 
-        old_experience = pd.DataFrame(
-            old_experience
+        old_private_experience = pd.DataFrame(
+            old_private_experience
         )
 
         # ------------------------------
-        # 既存データの末尾に今回の1件を追加する
+        # 既存の非公開データに今回の1件を追加する
         # ------------------------------
-        updated_experience = pd.concat(
+        updated_private_experience = pd.concat(
             [
-                old_experience,
-                new_experience
+                old_private_experience,
+                new_private_experience
             ],
             ignore_index=True
         )
 
-
-
         # ------------------------------
-        # experience_share シートへ保存する
+        # experience_private シートへ保存する
         # ------------------------------
         share_conn.update(
-            worksheet="experience_share",
-            data=updated_experience
+            worksheet="experience_private",
+            data=updated_private_experience
         )
+
+        # ------------------------------
+        # 「共有する」を選んだ場合だけ、
+        # 加工後の記録を experience_share に保存する
+        # ------------------------------
+        if should_share:
+
+            # experience_share シートを読み込む
+            old_experience = share_conn.read(
+                worksheet="experience_share",
+                ttl=0
+            )
+
+            old_experience = pd.DataFrame(
+                old_experience
+            )
+
+            # 既存の共有データに今回の1件を追加する
+            updated_experience = pd.concat(
+                [
+                    old_experience,
+                    new_experience
+                ],
+                ignore_index=True
+            )
+
+            # experience_share シートへ保存する
+            share_conn.update(
+                worksheet="experience_share",
+                data=updated_experience
+            )
 
         st.session_state["share_record_saved"] = True
 
@@ -1487,6 +1725,15 @@ if st.session_state["current_screen"] == "share_search":
                 st.write(
                     "参考になること：",
                     record["memo_public"]
+                )
+
+            if (
+                pd.notna(record["reference_source_public"])
+                and str(record["reference_source_public"]).strip() != ""
+            ):
+                st.write(
+                    "参考にした助言・本・Webサイト・資料：",
+                    record["reference_source_public"]
                 )
 
     if st.button(
