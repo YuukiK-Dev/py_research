@@ -300,25 +300,6 @@ share_conn = st.connection(
 )
 
 
-# users シートを読む
-# ログインしていないときだけ、本人確認用に読み込む
-# ------------------------------
-if not st.session_state["is_logged_in"]:
-    try:
-        if "users_df" not in st.session_state:
-            with st.spinner("読み込み中です。しばらくお待ちください"):
-                st.session_state["users_df"] = conn.read(worksheet="users", ttl=600)
-
-        users_df = st.session_state["users_df"]
-
-
-    except Exception:
-        # 読み込みに失敗したら、ここで止める
-        st.error("Google Sheets の読み込みに失敗しました")
-        st.error("secrets.toml や シート名 users を確認してください")
-        st.stop()
-
-
 # ------------------------------
 # 入力欄を表示する
 # ログインしていないときだけ、IDとパスワード入力欄を表示する
@@ -356,8 +337,24 @@ if not st.session_state["is_logged_in"]:
             st.error("配付されたIDと配付されたパスワードの両方を入力してください")
             st.stop()
 
+        # ------------------------------
+        # ログインボタンを押したときだけ
+        # users シートを読み込む
+        # ------------------------------
+        try:
+            if "users_df" not in st.session_state:
+                with st.spinner("ログイン情報を確認しています"):
+                    st.session_state["users_df"] = conn.read(
+                        worksheet="users",
+                        ttl=600
+                    )
 
+            users_df = st.session_state["users_df"]
 
+        except Exception:
+            st.error("Google Sheets の読み込みに失敗しました")
+            st.error("secrets.toml や シート名 users を確認してください")
+            st.stop()
 
 
         # ------------------------------
