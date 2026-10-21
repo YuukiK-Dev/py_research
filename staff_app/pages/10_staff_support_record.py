@@ -2583,8 +2583,6 @@ if support_category == "選択してください":
         ]
     )
 
-    st.session_state["support_category"] = support_category
-
 
 # --- ここから 保存ボタン（まだSheetsには保存しない） ---
 
