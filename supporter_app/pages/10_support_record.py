@@ -91,7 +91,13 @@ import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 import time
 import re
+import spacy
+
 SHOW_AI_DEBUG = False
+
+@st.cache_resource
+def load_ginza_model():
+    return spacy.load("ja_ginza")
 
 # 基本の対応例を画面に表示するかどうかを切り替える設定
 # True : API未接続・開発中は表示する
@@ -802,6 +808,129 @@ def mask_direct_identifiers(text):
 
     return masked_text
 
+# ------------------------------
+# OpenAI APIへ送る前に、
+# 人名・地域名・学校名・施設名などを
+# GiNZAで可能な範囲で一般化する
+# ------------------------------
+def mask_named_entities(text):
+
+    if text is None or str(text).strip() == "":
+        return ""
+
+    source_text = str(text)
+
+    # 匿名化が必要になったときだけGINZAを読み込む
+    nlp = load_ginza_model()
+    doc = nlp(source_text)
+    
+
+    replacements = []
+
+    entity_map = {
+        "Person": "[人名]",
+        "Province": "[地域]",
+        "City": "[地域]",
+        "County": "[地域]",
+        "School": "[学校・施設]",
+        "Company": "[会社]",
+        "Corporation_Other": "[施設・組織]",
+    }
+
+    for ent in doc.ents:
+        if ent.label_ in entity_map:
+            replacements.append(
+                (
+                    ent.start_char,
+                    ent.end_char,
+                    entity_map[ent.label_]
+                )
+            )
+    # GiNZAの固有表現認識で学校名を取りこぼした場合に、
+    # 「小学校」「中学校」などの単語から補助的に学校名を検出する
+    school_suffixes = {
+        "小学校",
+        "中学校",
+        "高等学校",
+        "高校",
+        "大学",
+        "専門学校",
+        "支援学校",
+    }
+
+    for token in doc:
+
+        if token.text in school_suffixes:
+
+            start_token = token
+
+            # 学校名の直前にある最大2語まで確認する
+            for offset in [1, 2]:
+
+                previous_index = token.i - offset
+
+                if previous_index < 0:
+                    break
+
+                previous_token = doc[previous_index]
+
+                if previous_token.pos_ in {"PROPN", "NOUN"}:
+                    start_token = previous_token
+                else:
+                    break
+
+            replacements.append(
+                (
+                    start_token.idx,
+                    token.idx + len(token.text),
+                    "[学校・施設]"
+                )
+            )
+
+    # 同じ文字列の範囲が重複して検出された場合は、
+    # より広い範囲の検出結果を優先する
+    sorted_replacements = sorted(
+        replacements,
+        key=lambda x: (
+            -(x[1] - x[0]),
+            x[0]
+        )
+    )
+
+    non_overlapping_replacements = []
+
+    for replacement in sorted_replacements:
+
+        start, end, label = replacement
+
+        has_overlap = any(
+            not (
+                end <= existing_start
+                or start >= existing_end
+            )
+            for existing_start, existing_end, _ in non_overlapping_replacements
+        )
+
+        if not has_overlap:
+            non_overlapping_replacements.append(replacement)
+
+    replacements = non_overlapping_replacements
+
+    masked_text = source_text
+
+    for start, end, replacement in sorted(
+        replacements,
+        key=lambda x: x[0],
+        reverse=True
+    ):
+        masked_text = (
+            masked_text[:start]
+            + replacement
+            + masked_text[end:]
+        )
+
+    return masked_text
+
 
 # ------------------------------
 # 共有用の文章を匿名化する関数
@@ -815,9 +944,18 @@ def anonymize_text_for_share(text):
     # OpenAPIへ送る前に、直接識別子を一次マスキングする
     masked_text = mask_direct_identifiers(text)
 
+    # 人名・地域名・学校名・施設名などを追加で一般化する
+    masked_text = mask_named_entities(masked_text)
+
+    if SHOW_AI_DEBUG:
+        print("【OpenAI APIへ送信する直前の文章】")
+        print(masked_text)
+
+
+
     # 一次マスキング後に、置換記号以外の内容が残っているか確認する
     text_without_placeholders = re.sub(
-        r"\[(電話番号|メールアドレス|郵便番号|URL|ID)\]",
+        r"\[(電話番号|メールアドレス|郵便番号|URL|ID|人名|地域|学校・施設|会社|施設・組織)\]",
         "",
         masked_text
     )
@@ -1341,7 +1479,13 @@ if st.session_state["current_screen"] == "share_record":
                         )
                     )
 
-            except Exception:
+            except Exception as e:
+
+                if SHOW_AI_DEBUG:
+                    print("【共有用文章作成エラー】")
+                    print(type(e).__name__)
+                    print(str(e))
+
                 st.error(
                     "共有用の文章を作成できませんでした。"
                     "時間をおいて、もう一度お試しください"
@@ -1511,6 +1655,10 @@ if st.session_state["current_screen"] == "share_record":
 # ------------------------------
 if st.session_state["current_screen"] == "share_search":
 
+# 共有記録の表示件数を覚えておく
+    if "share_search_display_count" not in st.session_state:
+        st.session_state["share_search_display_count"] = 5
+
     st.title("AI支援ナビ")
     st.subheader("🔍 他の方の支援記録を見る")
 
@@ -1610,8 +1758,50 @@ if st.session_state["current_screen"] == "share_search":
         key="share_search_characteristic"
     )
 
-    # まずは他の方の記録を全部対象にする
-    filtered_records = other_records.copy()
+
+
+    # 何か1つでも検索条件が選ばれているか確認する
+    has_search_condition = any([
+        search_category != "すべて",
+        search_stage != "すべて",
+        search_diagnosis != "すべて",
+        search_gender != "すべて",
+        search_characteristic != "すべて",
+    ])
+
+    # 現在選ばれている検索条件をまとめる
+    current_search_conditions = (
+        search_category,
+        search_stage,
+        search_diagnosis,
+        search_gender,
+        search_characteristic,
+    )
+
+    # 前回の検索条件がまだ保存されていない場合は、
+    # 現在の条件を保存する
+    if "previous_share_search_conditions" not in st.session_state:
+        st.session_state["previous_share_search_conditions"] = (
+            current_search_conditions
+        )
+
+    # 検索条件が前回から変わった場合は、
+    # 表示件数を最初の5件に戻す
+    elif (
+        st.session_state["previous_share_search_conditions"]
+        != current_search_conditions
+    ):
+        st.session_state["share_search_display_count"] = 5
+        st.session_state["previous_share_search_conditions"] = (
+            current_search_conditions
+        )
+
+
+    # 検索条件が選ばれている場合だけ、共有記録を検索対象にする
+    if has_search_condition:
+        filtered_records = other_records.copy()
+    else:
+        filtered_records = pd.DataFrame()
 
     # 「すべて」以外が選ばれた場合だけ絞り込む
     if search_category != "すべて":
@@ -1658,8 +1848,23 @@ if st.session_state["current_screen"] == "share_search":
             )
         ]
 
+    # 検索結果を新しい記録から順番に並べる
+    if not filtered_records.empty:
+
+        filtered_records = filtered_records.sort_values(
+            "created_at",
+            ascending=False
+        )
+    
+
     # 他の方の共有記録を1件だけ表示して確認する
-    if filtered_records.empty:
+    if not has_search_condition:
+
+        st.info(
+            "条件を選んで検索してください。"
+        )
+
+    elif filtered_records.empty:
 
         st.info(
             "検索条件に合う支援記録はまだありません。\n\n"
@@ -1668,11 +1873,16 @@ if st.session_state["current_screen"] == "share_search":
 
     else:
 
+        display_count = min(len(filtered_records), 5)
+
         st.write(
             f"検索結果 : {len(filtered_records)}件"
+            f"（このうち最大{display_count}件を表示します）"
         )
 
-        for _, record in filtered_records.iterrows():
+        for _, record in filtered_records.head(
+            st.session_state["share_search_display_count"]
+        ).iterrows():
 
             st.markdown("---")
             st.markdown("### 📖 支援記録")
@@ -1732,6 +1942,23 @@ if st.session_state["current_screen"] == "share_search":
                     "参考にした助言・本・Webサイト・資料：",
                     record["reference_source_public"]
                 )
+
+        # まだ表示していない記録が残っている場合だけ、
+        # 「さらに5件表示する」ボタンを表示する
+        if (
+            st.session_state["share_search_display_count"]
+            < len(filtered_records)
+        ):
+
+            if st.button(
+                "さらに5件表示する",
+                use_container_width=True
+            ):
+
+                st.session_state["share_search_display_count"] += 5
+                st.rerun()
+
+            
 
     if st.button(
         "⬅️ ホーム画面へ戻る",
@@ -1922,6 +2149,20 @@ if st.session_state["current_screen"] == "home":
         "他の利用者の参考になる記録を共有したいときは、"
         "「支援記録を共有する」を選んでください。"
     )
+
+    st.markdown("---")
+
+    if st.button(
+        "🚪 ログアウト",
+        use_container_width=True
+    ):
+        st.session_state["is_logged_in"] = False
+        st.session_state["participant_id"] = ""
+        st.session_state["current_screen"] = "home"
+
+        if "users_df" in st.session_state:
+            del st.session_state["users_df"]
+        st.rerun()
 
     # ホーム画面より下にある入力画面を表示しない
     st.stop()
@@ -3185,6 +3426,13 @@ if st.session_state["current_screen"] == "hint":
 
         st.markdown("### 🤖 Step4：AIからの対応ヒント")
         st.caption("入力内容をもとに、次の対応を考えるヒントを確認します。")
+        st.info(
+            "ℹ️ AIヒントについて\n\n"
+            "AIヒントは、ここで選択した「場所」「ご本人との関係」"
+            "「現在の状態」「困りごとのカテゴリ」をもとに作成します。\n\n"
+            "他の利用者が共有した支援記録や、"
+            "あなた自身の過去の支援記録をAIが自動で参照して作成するものではありません。"
+        )
 
         st.markdown(
             """
