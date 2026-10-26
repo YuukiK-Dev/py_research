@@ -3,3 +3,6 @@ st-gsheets-connection
 pandas
 pytz
 openai
+spacy
+ginza
+ja-ginza
