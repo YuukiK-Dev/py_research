@@ -1709,7 +1709,7 @@ if st.session_state["current_screen"] == "share_search":
         other_records = pd.DataFrame()
 
     st.write(
-        f"現在参照できる共有記録 : {len(other_records)}件"
+        f"全カテゴリーで参照できる共有記録 : {len(other_records)}件"
     )
 
     # ------------------
