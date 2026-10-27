@@ -1873,7 +1873,11 @@ if st.session_state["current_screen"] == "share_search":
 
     else:
 
-        display_count = min(len(filtered_records), 5)
+        display_count = min(
+            len(filtered_records), 
+            st.session_state["share_search_display_count"]
+        
+        )
 
         st.write(
             f"検索結果 : {len(filtered_records)}件"
