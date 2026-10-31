@@ -475,9 +475,11 @@ try:
     user_profile_df = pd.DataFrame(user_profile_df)
 
 except Exception:
+    # 利用者には簡潔なエラーメッセージだけを表示する
     st.error("基本情報の読み込みに失敗しました")
     st.stop()
 
+    
 # participant_id を文字列としてそろえる
 if not user_profile_df.empty:
     user_profile_df["participant_id"] = (
@@ -1629,11 +1631,23 @@ if st.session_state["current_screen"] == "share_record":
                 ignore_index=True
             )
 
-            # experience_share シートへ保存する
-            share_conn.update(
-                worksheet="experience_share",
-                data=updated_experience
-            )
+            # experience_share シートへの保存を試す
+            try:
+                share_conn.update(
+                    worksheet="experience_share",
+                    data=updated_experience
+                )
+
+            # 保存に失敗した場合は利用者に知らせる
+            except Exception as e:
+                st.error("共有用の記録を保存できませんでした。")
+
+                # 開発中だけ、詳しいエラー内容を表示する
+                if SHOW_AI_DEBUG:
+                    st.error(f"エラーの種類：{type(e).__name__}")
+                    st.error(f"エラーの詳細：{e}")
+
+                st.stop()
 
         st.session_state["share_record_saved"] = True
 
